@@ -1,0 +1,2 @@
+cut: data/train_nodev/text: No such file or directory
+run.pl: job failed, log is in exp/train_nodev_pytorch_train_mtlalpha1.0/train.log

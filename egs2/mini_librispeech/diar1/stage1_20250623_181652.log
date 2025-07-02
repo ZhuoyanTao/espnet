@@ -1,0 +1,789 @@
+2025-06-23T18:30:59 (diar.sh:141:main) ./diar.sh --collar 0.0 --train_set simu/data/train_clean_5_ns2_beta2_500 --valid_set simu/data/dev_clean_2_ns2_beta2_500 --test_sets simu/data/dev_clean_2_ns2_beta2_500 --ngpu 1 --diar_config conf/train_diar.yaml --inference_config conf/decode_diar.yaml --inference_nj 5 --local_data_opts --stage 0 --stage 1 --stop_stage 1
+2025-06-23T18:31:11 (diar.sh:193:main) Stage 1: Data preparation for data/simu/data/train_clean_5_ns2_beta2_500, data/simu/data/dev_clean_2_ns2_beta2_500, etc.
+ Stage 1: prepare simulation sources
+local/download_and_untar.sh: data part dev-clean-2 was already successfully extracted, nothing to do.
+local/download_and_untar.sh: data part train-clean-5 was already successfully extracted, nothing to do.
+simulation of mixture
+/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/utils/validate_data_dir.sh: Error: in data/simu/data/train_clean_5_ns2_beta2_500, recording-ids extracted from segments and reco2dur file
+/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/utils/validate_data_dir.sh: differ, partial diff is:
+--- /tmp/kaldi.Y6N0/recordings	2025-06-23 18:31:13.524690760 -0400
++++ /tmp/kaldi.Y6N0/recordings.reco2dur	2025-06-23 18:31:13.543690573 -0400
+@@ -1,500 +0,0 @@
+-data_simu_wav_train_clean_5_ns2_beta2_500_10_mix_0000451
+-data_simu_wav_train_clean_5_ns2_beta2_500_10_mix_0000452
+-data_simu_wav_train_clean_5_ns2_beta2_500_10_mix_0000453
+...
+-data_simu_wav_train_clean_5_ns2_beta2_500_9_mix_0000445
+-data_simu_wav_train_clean_5_ns2_beta2_500_9_mix_0000446
+-data_simu_wav_train_clean_5_ns2_beta2_500_9_mix_0000447
+-data_simu_wav_train_clean_5_ns2_beta2_500_9_mix_0000448
+-data_simu_wav_train_clean_5_ns2_beta2_500_9_mix_0000449
+-data_simu_wav_train_clean_5_ns2_beta2_500_9_mix_0000450
+[Lengths are /tmp/kaldi.Y6N0/recordings=500 versus /tmp/kaldi.Y6N0/recordings.reco2dur=0]
+generate random mixture
+/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/utils/slurm.pl: 10 / 10 failed, log is in data/simu/.work/make_mixture_train_clean_5_ns2_beta2_500.*.log
+# Running on r285.ib.bridges2.psc.edu
+# Started at Mon Jun 23 18:38:14 EDT 2025
+# SLURMD_NODENAME=r285
+# SLURM_ARRAY_JOB_ID=32941826
+# SLURM_ARRAY_TASK_COUNT=10
+# SLURM_ARRAY_TASK_ID=1
+# SLURM_ARRAY_TASK_MAX=10
+# SLURM_ARRAY_TASK_MIN=1
+# SLURM_ARRAY_TASK_STEP=1
+# SLURM_CLUSTER_NAME=bridges2
+# SLURM_CONF=/var/spool/slurm/d/conf-cache/slurm.conf
+# SLURM_CPUS_ON_NODE=1
+# SLURM_EXPORT_ENV=ALL
+# SLURM_GET_USER_ENV=1
+# SLURM_GTIDS=0
+# SLURM_JOBID=32941831
+# SLURM_JOB_ACCOUNT=cis210027p
+# SLURM_JOB_CPUS_PER_NODE=1
+# SLURM_JOB_GID=24886
+# SLURM_JOB_ID=32941831
+# SLURM_JOB_NAME=make_mixture_train_clean_5_ns2_beta2_500.sh
+# SLURM_JOB_NODELIST=r285
+# SLURM_JOB_NUM_NODES=1
+# SLURM_JOB_PARTITION=RM-shared
+# SLURM_JOB_QOS=rm
+# SLURM_JOB_UID=97947
+# SLURM_JOB_USER=ttao3
+# SLURM_LOCALID=0
+# SLURM_MEM_PER_CPU=1900
+# SLURM_NNODES=1
+# SLURM_NODEID=0
+# SLURM_NODELIST=r285
+# SLURM_NODE_ALIASES='(null)'
+# SLURM_OPEN_MODE=a
+# SLURM_PRIO_PROCESS=0
+# SLURM_PROCID=0
+# SLURM_SCRIPT_CONTEXT=prolog_task
+# SLURM_SUBMIT_DIR=/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+# SLURM_SUBMIT_HOST=br014.ib.bridges2.psc.edu
+# SLURM_TASKS_PER_NODE=1
+# SLURM_TASK_PID=35046
+# SLURM_TOPOLOGY_ADDR=r285
+# SLURM_TOPOLOGY_ADDR_PATTERN=node
+# SLURM_WORKING_CLUSTER=bridges2:br003:6810:9728:109
+# make_mixture.py --rate=8000 data/simu/.work/mixture_train_clean_5_ns2_beta2_500.1.scp data/simu/.work/data_train_clean_5_ns2_beta2_500.1 data/simu/wav/train_clean_5_ns2_beta2_500/1 
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 156, in <module>
+    main()
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 85, in main
+    sig, fs = read_wav(args.input_wav, args.input_channel)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 15, in read_wav
+    data, fs = sf.read(sys.stdin.buffer, 
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 688, in __init__
+    self._info = _create_info_struct(file, mode, samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1556, in _create_info_struct
+    raise TypeError("Not allowed for existing files (except 'RAW'): "
+TypeError: Not allowed for existing files (except 'RAW'): samplerate, channels, format, subtype, endian
+sox FAIL formats: can't open input  `-': WAVE: RIFF header not found
+/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/make_mixture.py", line 82, in <module>
+    speech, _ = common.load_wav(wav_rxfilename, st, et)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/common.py", line 78, in load_wav
+    data, samplerate = sf.read(
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BytesIO object at 0x1470f37836d0>: Format not recognised.
+# Accounting: begin_time=1750718294
+# Accounting: end_time=1750718319
+# Accounting: time=25 threads=1
+# Finished at Mon Jun 23 18:38:39 EDT 2025 with status 1
+# Running on r043.ib.bridges2.psc.edu
+# Started at Mon Jun 23 18:37:01 EDT 2025
+# SLURMD_NODENAME=r043
+# SLURM_ARRAY_JOB_ID=32941826
+# SLURM_ARRAY_TASK_COUNT=10
+# SLURM_ARRAY_TASK_ID=10
+# SLURM_ARRAY_TASK_MAX=10
+# SLURM_ARRAY_TASK_MIN=1
+# SLURM_ARRAY_TASK_STEP=1
+# SLURM_CLUSTER_NAME=bridges2
+# SLURM_CONF=/var/spool/slurm/d/conf-cache/slurm.conf
+# SLURM_CPUS_ON_NODE=1
+# SLURM_EXPORT_ENV=ALL
+# SLURM_GET_USER_ENV=1
+# SLURM_GTIDS=0
+# SLURM_JOBID=32941826
+# SLURM_JOB_ACCOUNT=cis210027p
+# SLURM_JOB_CPUS_PER_NODE=1
+# SLURM_JOB_GID=24886
+# SLURM_JOB_ID=32941826
+# SLURM_JOB_NAME=make_mixture_train_clean_5_ns2_beta2_500.sh
+# SLURM_JOB_NODELIST=r043
+# SLURM_JOB_NUM_NODES=1
+# SLURM_JOB_PARTITION=RM-shared
+# SLURM_JOB_QOS=rm
+# SLURM_JOB_UID=97947
+# SLURM_JOB_USER=ttao3
+# SLURM_LOCALID=0
+# SLURM_MEM_PER_CPU=1900
+# SLURM_NNODES=1
+# SLURM_NODEID=0
+# SLURM_NODELIST=r043
+# SLURM_NODE_ALIASES='(null)'
+# SLURM_OPEN_MODE=a
+# SLURM_PRIO_PROCESS=0
+# SLURM_PROCID=0
+# SLURM_SCRIPT_CONTEXT=prolog_task
+# SLURM_SUBMIT_DIR=/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+# SLURM_SUBMIT_HOST=br014.ib.bridges2.psc.edu
+# SLURM_TASKS_PER_NODE=1
+# SLURM_TASK_PID=96690
+# SLURM_TOPOLOGY_ADDR=r043
+# SLURM_TOPOLOGY_ADDR_PATTERN=node
+# SLURM_WORKING_CLUSTER=bridges2:br003:6810:9728:109
+# make_mixture.py --rate=8000 data/simu/.work/mixture_train_clean_5_ns2_beta2_500.10.scp data/simu/.work/data_train_clean_5_ns2_beta2_500.10 data/simu/wav/train_clean_5_ns2_beta2_500/10 
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 156, in <module>
+    main()
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 85, in main
+    sig, fs = read_wav(args.input_wav, args.input_channel)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 15, in read_wav
+    data, fs = sf.read(sys.stdin.buffer, 
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 688, in __init__
+    self._info = _create_info_struct(file, mode, samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1556, in _create_info_struct
+    raise TypeError("Not allowed for existing files (except 'RAW'): "
+TypeError: Not allowed for existing files (except 'RAW'): samplerate, channels, format, subtype, endian
+sox FAIL formats: can't open input  `-': WAVE: RIFF header not found
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/make_mixture.py", line 82, in <module>
+    speech, _ = common.load_wav(wav_rxfilename, st, et)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/common.py", line 78, in load_wav
+    data, samplerate = sf.read(
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BytesIO object at 0x151a8dd2fc20>: Format not recognised.
+# Accounting: begin_time=1750718221
+# Accounting: end_time=1750718241
+# Accounting: time=20 threads=1
+# Finished at Mon Jun 23 18:37:21 EDT 2025 with status 1
+# Running on r005.ib.bridges2.psc.edu
+# Started at Mon Jun 23 18:36:47 EDT 2025
+# SLURMD_NODENAME=r005
+# SLURM_ARRAY_JOB_ID=32941826
+# SLURM_ARRAY_TASK_COUNT=10
+# SLURM_ARRAY_TASK_ID=2
+# SLURM_ARRAY_TASK_MAX=10
+# SLURM_ARRAY_TASK_MIN=1
+# SLURM_ARRAY_TASK_STEP=1
+# SLURM_CLUSTER_NAME=bridges2
+# SLURM_CONF=/var/spool/slurm/d/conf-cache/slurm.conf
+# SLURM_CPUS_ON_NODE=1
+# SLURM_EXPORT_ENV=ALL
+# SLURM_GET_USER_ENV=1
+# SLURM_GTIDS=0
+# SLURM_JOBID=32941832
+# SLURM_JOB_ACCOUNT=cis210027p
+# SLURM_JOB_CPUS_PER_NODE=1
+# SLURM_JOB_GID=24886
+# SLURM_JOB_ID=32941832
+# SLURM_JOB_NAME=make_mixture_train_clean_5_ns2_beta2_500.sh
+# SLURM_JOB_NODELIST=r005
+# SLURM_JOB_NUM_NODES=1
+# SLURM_JOB_PARTITION=RM-shared
+# SLURM_JOB_QOS=rm
+# SLURM_JOB_UID=97947
+# SLURM_JOB_USER=ttao3
+# SLURM_LOCALID=0
+# SLURM_MEM_PER_CPU=1900
+# SLURM_NNODES=1
+# SLURM_NODEID=0
+# SLURM_NODELIST=r005
+# SLURM_NODE_ALIASES='(null)'
+# SLURM_OPEN_MODE=a
+# SLURM_PRIO_PROCESS=0
+# SLURM_PROCID=0
+# SLURM_SCRIPT_CONTEXT=prolog_task
+# SLURM_SUBMIT_DIR=/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+# SLURM_SUBMIT_HOST=br014.ib.bridges2.psc.edu
+# SLURM_TASKS_PER_NODE=1
+# SLURM_TASK_PID=100826
+# SLURM_TOPOLOGY_ADDR=r005
+# SLURM_TOPOLOGY_ADDR_PATTERN=node
+# SLURM_WORKING_CLUSTER=bridges2:br003:6810:9728:109
+# make_mixture.py --rate=8000 data/simu/.work/mixture_train_clean_5_ns2_beta2_500.2.scp data/simu/.work/data_train_clean_5_ns2_beta2_500.2 data/simu/wav/train_clean_5_ns2_beta2_500/2 
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 156, in <module>
+    main()
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 85, in main
+    sig, fs = read_wav(args.input_wav, args.input_channel)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 15, in read_wav
+    data, fs = sf.read(sys.stdin.buffer, 
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 688, in __init__
+    self._info = _create_info_struct(file, mode, samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1556, in _create_info_struct
+    raise TypeError("Not allowed for existing files (except 'RAW'): "
+TypeError: Not allowed for existing files (except 'RAW'): samplerate, channels, format, subtype, endian
+sox FAIL formats: can't open input  `-': WAVE: RIFF header not found
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/make_mixture.py", line 82, in <module>
+    speech, _ = common.load_wav(wav_rxfilename, st, et)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/common.py", line 78, in load_wav
+    data, samplerate = sf.read(
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BytesIO object at 0x14f477b50a90>: Format not recognised.
+# Accounting: begin_time=1750718207
+# Accounting: end_time=1750718208
+# Accounting: time=1 threads=1
+# Finished at Mon Jun 23 18:36:48 EDT 2025 with status 1
+# Running on r005.ib.bridges2.psc.edu
+# Started at Mon Jun 23 18:36:47 EDT 2025
+# SLURMD_NODENAME=r005
+# SLURM_ARRAY_JOB_ID=32941826
+# SLURM_ARRAY_TASK_COUNT=10
+# SLURM_ARRAY_TASK_ID=3
+# SLURM_ARRAY_TASK_MAX=10
+# SLURM_ARRAY_TASK_MIN=1
+# SLURM_ARRAY_TASK_STEP=1
+# SLURM_CLUSTER_NAME=bridges2
+# SLURM_CONF=/var/spool/slurm/d/conf-cache/slurm.conf
+# SLURM_CPUS_ON_NODE=1
+# SLURM_EXPORT_ENV=ALL
+# SLURM_GET_USER_ENV=1
+# SLURM_GTIDS=0
+# SLURM_JOBID=32941833
+# SLURM_JOB_ACCOUNT=cis210027p
+# SLURM_JOB_CPUS_PER_NODE=1
+# SLURM_JOB_GID=24886
+# SLURM_JOB_ID=32941833
+# SLURM_JOB_NAME=make_mixture_train_clean_5_ns2_beta2_500.sh
+# SLURM_JOB_NODELIST=r005
+# SLURM_JOB_NUM_NODES=1
+# SLURM_JOB_PARTITION=RM-shared
+# SLURM_JOB_QOS=rm
+# SLURM_JOB_UID=97947
+# SLURM_JOB_USER=ttao3
+# SLURM_LOCALID=0
+# SLURM_MEM_PER_CPU=1900
+# SLURM_NNODES=1
+# SLURM_NODEID=0
+# SLURM_NODELIST=r005
+# SLURM_NODE_ALIASES='(null)'
+# SLURM_OPEN_MODE=a
+# SLURM_PRIO_PROCESS=0
+# SLURM_PROCID=0
+# SLURM_SCRIPT_CONTEXT=prolog_task
+# SLURM_SUBMIT_DIR=/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+# SLURM_SUBMIT_HOST=br014.ib.bridges2.psc.edu
+# SLURM_TASKS_PER_NODE=1
+# SLURM_TASK_PID=100836
+# SLURM_TOPOLOGY_ADDR=r005
+# SLURM_TOPOLOGY_ADDR_PATTERN=node
+# SLURM_WORKING_CLUSTER=bridges2:br003:6810:9728:109
+# make_mixture.py --rate=8000 data/simu/.work/mixture_train_clean_5_ns2_beta2_500.3.scp data/simu/.work/data_train_clean_5_ns2_beta2_500.3 data/simu/wav/train_clean_5_ns2_beta2_500/3 
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 156, in <module>
+    main()
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 85, in main
+    sig, fs = read_wav(args.input_wav, args.input_channel)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 15, in read_wav
+    data, fs = sf.read(sys.stdin.buffer, 
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 688, in __init__
+    self._info = _create_info_struct(file, mode, samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1556, in _create_info_struct
+    raise TypeError("Not allowed for existing files (except 'RAW'): "
+TypeError: Not allowed for existing files (except 'RAW'): samplerate, channels, format, subtype, endian
+sox FAIL formats: can't open input  `-': WAVE: RIFF header not found
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/make_mixture.py", line 82, in <module>
+    speech, _ = common.load_wav(wav_rxfilename, st, et)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/common.py", line 78, in load_wav
+    data, samplerate = sf.read(
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BytesIO object at 0x146a89cb8360>: Format not recognised.
+# Accounting: begin_time=1750718207
+# Accounting: end_time=1750718208
+# Accounting: time=1 threads=1
+# Finished at Mon Jun 23 18:36:48 EDT 2025 with status 1
+# Running on r030.ib.bridges2.psc.edu
+# Started at Mon Jun 23 18:37:01 EDT 2025
+# SLURMD_NODENAME=r030
+# SLURM_ARRAY_JOB_ID=32941826
+# SLURM_ARRAY_TASK_COUNT=10
+# SLURM_ARRAY_TASK_ID=4
+# SLURM_ARRAY_TASK_MAX=10
+# SLURM_ARRAY_TASK_MIN=1
+# SLURM_ARRAY_TASK_STEP=1
+# SLURM_CLUSTER_NAME=bridges2
+# SLURM_CONF=/var/spool/slurm/d/conf-cache/slurm.conf
+# SLURM_CPUS_ON_NODE=1
+# SLURM_EXPORT_ENV=ALL
+# SLURM_GET_USER_ENV=1
+# SLURM_GTIDS=0
+# SLURM_JOBID=32941834
+# SLURM_JOB_ACCOUNT=cis210027p
+# SLURM_JOB_CPUS_PER_NODE=1
+# SLURM_JOB_GID=24886
+# SLURM_JOB_ID=32941834
+# SLURM_JOB_NAME=make_mixture_train_clean_5_ns2_beta2_500.sh
+# SLURM_JOB_NODELIST=r030
+# SLURM_JOB_NUM_NODES=1
+# SLURM_JOB_PARTITION=RM-shared
+# SLURM_JOB_QOS=rm
+# SLURM_JOB_UID=97947
+# SLURM_JOB_USER=ttao3
+# SLURM_LOCALID=0
+# SLURM_MEM_PER_CPU=1900
+# SLURM_NNODES=1
+# SLURM_NODEID=0
+# SLURM_NODELIST=r030
+# SLURM_NODE_ALIASES='(null)'
+# SLURM_OPEN_MODE=a
+# SLURM_PRIO_PROCESS=0
+# SLURM_PROCID=0
+# SLURM_SCRIPT_CONTEXT=prolog_task
+# SLURM_SUBMIT_DIR=/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+# SLURM_SUBMIT_HOST=br014.ib.bridges2.psc.edu
+# SLURM_TASKS_PER_NODE=1
+# SLURM_TASK_PID=95683
+# SLURM_TOPOLOGY_ADDR=r030
+# SLURM_TOPOLOGY_ADDR_PATTERN=node
+# SLURM_WORKING_CLUSTER=bridges2:br003:6810:9728:109
+# make_mixture.py --rate=8000 data/simu/.work/mixture_train_clean_5_ns2_beta2_500.4.scp data/simu/.work/data_train_clean_5_ns2_beta2_500.4 data/simu/wav/train_clean_5_ns2_beta2_500/4 
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 156, in <module>
+    main()
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 85, in main
+    sig, fs = read_wav(args.input_wav, args.input_channel)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 15, in read_wav
+    data, fs = sf.read(sys.stdin.buffer, 
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 688, in __init__
+    self._info = _create_info_struct(file, mode, samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1556, in _create_info_struct
+    raise TypeError("Not allowed for existing files (except 'RAW'): "
+TypeError: Not allowed for existing files (except 'RAW'): samplerate, channels, format, subtype, endian
+sox FAIL formats: can't open input  `-': WAVE: RIFF header not found
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/make_mixture.py", line 82, in <module>
+    speech, _ = common.load_wav(wav_rxfilename, st, et)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/common.py", line 78, in load_wav
+    data, samplerate = sf.read(
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BytesIO object at 0x152fcc895360>: Format not recognised.
+# Accounting: begin_time=1750718221
+# Accounting: end_time=1750718241
+# Accounting: time=20 threads=1
+# Finished at Mon Jun 23 18:37:21 EDT 2025 with status 1
+# Running on r030.ib.bridges2.psc.edu
+# Started at Mon Jun 23 18:37:01 EDT 2025
+# SLURMD_NODENAME=r030
+# SLURM_ARRAY_JOB_ID=32941826
+# SLURM_ARRAY_TASK_COUNT=10
+# SLURM_ARRAY_TASK_ID=5
+# SLURM_ARRAY_TASK_MAX=10
+# SLURM_ARRAY_TASK_MIN=1
+# SLURM_ARRAY_TASK_STEP=1
+# SLURM_CLUSTER_NAME=bridges2
+# SLURM_CONF=/var/spool/slurm/d/conf-cache/slurm.conf
+# SLURM_CPUS_ON_NODE=1
+# SLURM_EXPORT_ENV=ALL
+# SLURM_GET_USER_ENV=1
+# SLURM_GTIDS=0
+# SLURM_JOBID=32941835
+# SLURM_JOB_ACCOUNT=cis210027p
+# SLURM_JOB_CPUS_PER_NODE=1
+# SLURM_JOB_GID=24886
+# SLURM_JOB_ID=32941835
+# SLURM_JOB_NAME=make_mixture_train_clean_5_ns2_beta2_500.sh
+# SLURM_JOB_NODELIST=r030
+# SLURM_JOB_NUM_NODES=1
+# SLURM_JOB_PARTITION=RM-shared
+# SLURM_JOB_QOS=rm
+# SLURM_JOB_UID=97947
+# SLURM_JOB_USER=ttao3
+# SLURM_LOCALID=0
+# SLURM_MEM_PER_CPU=1900
+# SLURM_NNODES=1
+# SLURM_NODEID=0
+# SLURM_NODELIST=r030
+# SLURM_NODE_ALIASES='(null)'
+# SLURM_OPEN_MODE=a
+# SLURM_PRIO_PROCESS=0
+# SLURM_PROCID=0
+# SLURM_SCRIPT_CONTEXT=prolog_task
+# SLURM_SUBMIT_DIR=/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+# SLURM_SUBMIT_HOST=br014.ib.bridges2.psc.edu
+# SLURM_TASKS_PER_NODE=1
+# SLURM_TASK_PID=95676
+# SLURM_TOPOLOGY_ADDR=r030
+# SLURM_TOPOLOGY_ADDR_PATTERN=node
+# SLURM_WORKING_CLUSTER=bridges2:br003:6810:9728:109
+# make_mixture.py --rate=8000 data/simu/.work/mixture_train_clean_5_ns2_beta2_500.5.scp data/simu/.work/data_train_clean_5_ns2_beta2_500.5 data/simu/wav/train_clean_5_ns2_beta2_500/5 
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 156, in <module>
+    main()
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 85, in main
+    sig, fs = read_wav(args.input_wav, args.input_channel)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 15, in read_wav
+    data, fs = sf.read(sys.stdin.buffer, 
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 688, in __init__
+    self._info = _create_info_struct(file, mode, samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1556, in _create_info_struct
+    raise TypeError("Not allowed for existing files (except 'RAW'): "
+TypeError: Not allowed for existing files (except 'RAW'): samplerate, channels, format, subtype, endian
+sox FAIL formats: can't open input  `-': WAVE: RIFF header not found
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/make_mixture.py", line 82, in <module>
+    speech, _ = common.load_wav(wav_rxfilename, st, et)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/common.py", line 78, in load_wav
+    data, samplerate = sf.read(
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BytesIO object at 0x1484b26d2590>: Format not recognised.
+# Accounting: begin_time=1750718221
+# Accounting: end_time=1750718241
+# Accounting: time=20 threads=1
+# Finished at Mon Jun 23 18:37:21 EDT 2025 with status 1
+# Running on r030.ib.bridges2.psc.edu
+# Started at Mon Jun 23 18:37:00 EDT 2025
+# SLURMD_NODENAME=r030
+# SLURM_ARRAY_JOB_ID=32941826
+# SLURM_ARRAY_TASK_COUNT=10
+# SLURM_ARRAY_TASK_ID=6
+# SLURM_ARRAY_TASK_MAX=10
+# SLURM_ARRAY_TASK_MIN=1
+# SLURM_ARRAY_TASK_STEP=1
+# SLURM_CLUSTER_NAME=bridges2
+# SLURM_CONF=/var/spool/slurm/d/conf-cache/slurm.conf
+# SLURM_CPUS_ON_NODE=1
+# SLURM_EXPORT_ENV=ALL
+# SLURM_GET_USER_ENV=1
+# SLURM_GTIDS=0
+# SLURM_JOBID=32941836
+# SLURM_JOB_ACCOUNT=cis210027p
+# SLURM_JOB_CPUS_PER_NODE=1
+# SLURM_JOB_GID=24886
+# SLURM_JOB_ID=32941836
+# SLURM_JOB_NAME=make_mixture_train_clean_5_ns2_beta2_500.sh
+# SLURM_JOB_NODELIST=r030
+# SLURM_JOB_NUM_NODES=1
+# SLURM_JOB_PARTITION=RM-shared
+# SLURM_JOB_QOS=rm
+# SLURM_JOB_UID=97947
+# SLURM_JOB_USER=ttao3
+# SLURM_LOCALID=0
+# SLURM_MEM_PER_CPU=1900
+# SLURM_NNODES=1
+# SLURM_NODEID=0
+# SLURM_NODELIST=r030
+# SLURM_NODE_ALIASES='(null)'
+# SLURM_OPEN_MODE=a
+# SLURM_PRIO_PROCESS=0
+# SLURM_PROCID=0
+# SLURM_SCRIPT_CONTEXT=prolog_task
+# SLURM_SUBMIT_DIR=/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+# SLURM_SUBMIT_HOST=br014.ib.bridges2.psc.edu
+# SLURM_TASKS_PER_NODE=1
+# SLURM_TASK_PID=95677
+# SLURM_TOPOLOGY_ADDR=r030
+# SLURM_TOPOLOGY_ADDR_PATTERN=node
+# SLURM_WORKING_CLUSTER=bridges2:br003:6810:9728:109
+# make_mixture.py --rate=8000 data/simu/.work/mixture_train_clean_5_ns2_beta2_500.6.scp data/simu/.work/data_train_clean_5_ns2_beta2_500.6 data/simu/wav/train_clean_5_ns2_beta2_500/6 
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 156, in <module>
+    main()
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 85, in main
+    sig, fs = read_wav(args.input_wav, args.input_channel)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 15, in read_wav
+    data, fs = sf.read(sys.stdin.buffer, 
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 688, in __init__
+    self._info = _create_info_struct(file, mode, samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1556, in _create_info_struct
+    raise TypeError("Not allowed for existing files (except 'RAW'): "
+TypeError: Not allowed for existing files (except 'RAW'): samplerate, channels, format, subtype, endian
+sox FAIL formats: can't open input  `-': WAVE: RIFF header not found
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/make_mixture.py", line 82, in <module>
+    speech, _ = common.load_wav(wav_rxfilename, st, et)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/common.py", line 78, in load_wav
+    data, samplerate = sf.read(
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BytesIO object at 0x155146d11ef0>: Format not recognised.
+# Accounting: begin_time=1750718220
+# Accounting: end_time=1750718241
+# Accounting: time=21 threads=1
+# Finished at Mon Jun 23 18:37:21 EDT 2025 with status 1
+# Running on r030.ib.bridges2.psc.edu
+# Started at Mon Jun 23 18:37:00 EDT 2025
+# SLURMD_NODENAME=r030
+# SLURM_ARRAY_JOB_ID=32941826
+# SLURM_ARRAY_TASK_COUNT=10
+# SLURM_ARRAY_TASK_ID=7
+# SLURM_ARRAY_TASK_MAX=10
+# SLURM_ARRAY_TASK_MIN=1
+# SLURM_ARRAY_TASK_STEP=1
+# SLURM_CLUSTER_NAME=bridges2
+# SLURM_CONF=/var/spool/slurm/d/conf-cache/slurm.conf
+# SLURM_CPUS_ON_NODE=1
+# SLURM_EXPORT_ENV=ALL
+# SLURM_GET_USER_ENV=1
+# SLURM_GTIDS=0
+# SLURM_JOBID=32941837
+# SLURM_JOB_ACCOUNT=cis210027p
+# SLURM_JOB_CPUS_PER_NODE=1
+# SLURM_JOB_GID=24886
+# SLURM_JOB_ID=32941837
+# SLURM_JOB_NAME=make_mixture_train_clean_5_ns2_beta2_500.sh
+# SLURM_JOB_NODELIST=r030
+# SLURM_JOB_NUM_NODES=1
+# SLURM_JOB_PARTITION=RM-shared
+# SLURM_JOB_QOS=rm
+# SLURM_JOB_UID=97947
+# SLURM_JOB_USER=ttao3
+# SLURM_LOCALID=0
+# SLURM_MEM_PER_CPU=1900
+# SLURM_NNODES=1
+# SLURM_NODEID=0
+# SLURM_NODELIST=r030
+# SLURM_NODE_ALIASES='(null)'
+# SLURM_OPEN_MODE=a
+# SLURM_PRIO_PROCESS=0
+# SLURM_PROCID=0
+# SLURM_SCRIPT_CONTEXT=prolog_task
+# SLURM_SUBMIT_DIR=/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+# SLURM_SUBMIT_HOST=br014.ib.bridges2.psc.edu
+# SLURM_TASKS_PER_NODE=1
+# SLURM_TASK_PID=95686
+# SLURM_TOPOLOGY_ADDR=r030
+# SLURM_TOPOLOGY_ADDR_PATTERN=node
+# SLURM_WORKING_CLUSTER=bridges2:br003:6810:9728:109
+# make_mixture.py --rate=8000 data/simu/.work/mixture_train_clean_5_ns2_beta2_500.7.scp data/simu/.work/data_train_clean_5_ns2_beta2_500.7 data/simu/wav/train_clean_5_ns2_beta2_500/7 
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 156, in <module>
+    main()
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 85, in main
+    sig, fs = read_wav(args.input_wav, args.input_channel)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 15, in read_wav
+    data, fs = sf.read(sys.stdin.buffer, 
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 688, in __init__
+    self._info = _create_info_struct(file, mode, samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1556, in _create_info_struct
+    raise TypeError("Not allowed for existing files (except 'RAW'): "
+TypeError: Not allowed for existing files (except 'RAW'): samplerate, channels, format, subtype, endian
+sox FAIL formats: can't open input  `-': WAVE: RIFF header not found
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/make_mixture.py", line 82, in <module>
+    speech, _ = common.load_wav(wav_rxfilename, st, et)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/common.py", line 78, in load_wav
+    data, samplerate = sf.read(
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BytesIO object at 0x14b52408aef0>: Format not recognised.
+# Accounting: begin_time=1750718220
+# Accounting: end_time=1750718241
+# Accounting: time=21 threads=1
+# Finished at Mon Jun 23 18:37:21 EDT 2025 with status 1
+# Running on r043.ib.bridges2.psc.edu
+# Started at Mon Jun 23 18:37:01 EDT 2025
+# SLURMD_NODENAME=r043
+# SLURM_ARRAY_JOB_ID=32941826
+# SLURM_ARRAY_TASK_COUNT=10
+# SLURM_ARRAY_TASK_ID=8
+# SLURM_ARRAY_TASK_MAX=10
+# SLURM_ARRAY_TASK_MIN=1
+# SLURM_ARRAY_TASK_STEP=1
+# SLURM_CLUSTER_NAME=bridges2
+# SLURM_CONF=/var/spool/slurm/d/conf-cache/slurm.conf
+# SLURM_CPUS_ON_NODE=1
+# SLURM_EXPORT_ENV=ALL
+# SLURM_GET_USER_ENV=1
+# SLURM_GTIDS=0
+# SLURM_JOBID=32941838
+# SLURM_JOB_ACCOUNT=cis210027p
+# SLURM_JOB_CPUS_PER_NODE=1
+# SLURM_JOB_GID=24886
+# SLURM_JOB_ID=32941838
+# SLURM_JOB_NAME=make_mixture_train_clean_5_ns2_beta2_500.sh
+# SLURM_JOB_NODELIST=r043
+# SLURM_JOB_NUM_NODES=1
+# SLURM_JOB_PARTITION=RM-shared
+# SLURM_JOB_QOS=rm
+# SLURM_JOB_UID=97947
+# SLURM_JOB_USER=ttao3
+# SLURM_LOCALID=0
+# SLURM_MEM_PER_CPU=1900
+# SLURM_NNODES=1
+# SLURM_NODEID=0
+# SLURM_NODELIST=r043
+# SLURM_NODE_ALIASES='(null)'
+# SLURM_OPEN_MODE=a
+# SLURM_PRIO_PROCESS=0
+# SLURM_PROCID=0
+# SLURM_SCRIPT_CONTEXT=prolog_task
+# SLURM_SUBMIT_DIR=/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+# SLURM_SUBMIT_HOST=br014.ib.bridges2.psc.edu
+# SLURM_TASKS_PER_NODE=1
+# SLURM_TASK_PID=96699
+# SLURM_TOPOLOGY_ADDR=r043
+# SLURM_TOPOLOGY_ADDR_PATTERN=node
+# SLURM_WORKING_CLUSTER=bridges2:br003:6810:9728:109
+# make_mixture.py --rate=8000 data/simu/.work/mixture_train_clean_5_ns2_beta2_500.8.scp data/simu/.work/data_train_clean_5_ns2_beta2_500.8 data/simu/wav/train_clean_5_ns2_beta2_500/8 
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 156, in <module>
+    main()
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 85, in main
+    sig, fs = read_wav(args.input_wav, args.input_channel)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 15, in read_wav
+    data, fs = sf.read(sys.stdin.buffer, 
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 688, in __init__
+    self._info = _create_info_struct(file, mode, samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1556, in _create_info_struct
+    raise TypeError("Not allowed for existing files (except 'RAW'): "
+TypeError: Not allowed for existing files (except 'RAW'): samplerate, channels, format, subtype, endian
+sox FAIL formats: can't open input  `-': WAVE: RIFF header not found
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/make_mixture.py", line 82, in <module>
+    speech, _ = common.load_wav(wav_rxfilename, st, et)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/common.py", line 78, in load_wav
+    data, samplerate = sf.read(
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BytesIO object at 0x14c832223630>: Format not recognised.
+# Accounting: begin_time=1750718221
+# Accounting: end_time=1750718241
+# Accounting: time=20 threads=1
+# Finished at Mon Jun 23 18:37:21 EDT 2025 with status 1
+# Running on r043.ib.bridges2.psc.edu
+# Started at Mon Jun 23 18:37:01 EDT 2025
+# SLURMD_NODENAME=r043
+# SLURM_ARRAY_JOB_ID=32941826
+# SLURM_ARRAY_TASK_COUNT=10
+# SLURM_ARRAY_TASK_ID=9
+# SLURM_ARRAY_TASK_MAX=10
+# SLURM_ARRAY_TASK_MIN=1
+# SLURM_ARRAY_TASK_STEP=1
+# SLURM_CLUSTER_NAME=bridges2
+# SLURM_CONF=/var/spool/slurm/d/conf-cache/slurm.conf
+# SLURM_CPUS_ON_NODE=1
+# SLURM_EXPORT_ENV=ALL
+# SLURM_GET_USER_ENV=1
+# SLURM_GTIDS=0
+# SLURM_JOBID=32941839
+# SLURM_JOB_ACCOUNT=cis210027p
+# SLURM_JOB_CPUS_PER_NODE=1
+# SLURM_JOB_GID=24886
+# SLURM_JOB_ID=32941839
+# SLURM_JOB_NAME=make_mixture_train_clean_5_ns2_beta2_500.sh
+# SLURM_JOB_NODELIST=r043
+# SLURM_JOB_NUM_NODES=1
+# SLURM_JOB_PARTITION=RM-shared
+# SLURM_JOB_QOS=rm
+# SLURM_JOB_UID=97947
+# SLURM_JOB_USER=ttao3
+# SLURM_LOCALID=0
+# SLURM_MEM_PER_CPU=1900
+# SLURM_NNODES=1
+# SLURM_NODEID=0
+# SLURM_NODELIST=r043
+# SLURM_NODE_ALIASES='(null)'
+# SLURM_OPEN_MODE=a
+# SLURM_PRIO_PROCESS=0
+# SLURM_PROCID=0
+# SLURM_SCRIPT_CONTEXT=prolog_task
+# SLURM_SUBMIT_DIR=/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+# SLURM_SUBMIT_HOST=br014.ib.bridges2.psc.edu
+# SLURM_TASKS_PER_NODE=1
+# SLURM_TASK_PID=96694
+# SLURM_TOPOLOGY_ADDR=r043
+# SLURM_TOPOLOGY_ADDR_PATTERN=node
+# SLURM_WORKING_CLUSTER=bridges2:br003:6810:9728:109
+# make_mixture.py --rate=8000 data/simu/.work/mixture_train_clean_5_ns2_beta2_500.9.scp data/simu/.work/data_train_clean_5_ns2_beta2_500.9 data/simu/wav/train_clean_5_ns2_beta2_500/9 
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 156, in <module>
+    main()
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 85, in main
+    sig, fs = read_wav(args.input_wav, args.input_channel)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 15, in read_wav
+    data, fs = sf.read(sys.stdin.buffer, 
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 688, in __init__
+    self._info = _create_info_struct(file, mode, samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1556, in _create_info_struct
+    raise TypeError("Not allowed for existing files (except 'RAW'): "
+TypeError: Not allowed for existing files (except 'RAW'): samplerate, channels, format, subtype, endian
+sox FAIL formats: can't open input  `-': WAVE: RIFF header not found
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/make_mixture.py", line 82, in <module>
+    speech, _ = common.load_wav(wav_rxfilename, st, et)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/common.py", line 78, in load_wav
+    data, samplerate = sf.read(
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BytesIO object at 0x14978c090bd0>: Format not recognised.
+# Accounting: begin_time=1750718221
+# Accounting: end_time=1750718241
+# Accounting: time=20 threads=1
+# Finished at Mon Jun 23 18:37:21 EDT 2025 with status 1

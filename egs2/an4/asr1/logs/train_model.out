@@ -1,0 +1,4 @@
+dictionary: data/lang_1char/train_nodev_units.txt
+stage 3: LM Preparation
+dictionary: data/lang_1char/train_nodev_units.txt
+stage 4: Network Training

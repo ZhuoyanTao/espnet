@@ -76,10 +76,10 @@ elif [ -f $data/wav.scp ]; then
     echo "$0: successfully obtained utterance lengths from sphere-file headers"
   else
     echo "$0: could not get utterance lengths from sphere-file headers, using wav-to-duration"
-    if ! command -v wav-to-duration >/dev/null; then
-      echo  "$0: wav-to-duration is not on your path"
-      exit 1;
-    fi
+    # if ! command -v wav-to-duration >/dev/null; then
+    #   echo  "$0: wav-to-duration is not on your path"
+    #   exit 1;
+    # fi
 
     if grep -q 'sox.*speed' $data/wav.scp; then
       read_entire_file=true
@@ -97,8 +97,12 @@ elif [ -f $data/wav.scp ]; then
     utils/data/split_data.sh --per-utt $data $nj
     sdata=$data/split${nj}utt
 
+    # $cmd JOB=1:$nj $data/log/get_durations.JOB.log \
+    #   wav-to-duration --read-entire-file=$read_entire_file \
+    #   scp:$sdata/JOB/wav.scp ark,t:$sdata/JOB/utt2dur || \
+    #     { echo "$0: there was a problem getting the durations"; exit 1; }
     $cmd JOB=1:$nj $data/log/get_durations.JOB.log \
-      wav-to-duration --read-entire-file=$read_entire_file \
+      local/wav_duration.py \
       scp:$sdata/JOB/wav.scp ark,t:$sdata/JOB/utt2dur || \
         { echo "$0: there was a problem getting the durations"; exit 1; }
 

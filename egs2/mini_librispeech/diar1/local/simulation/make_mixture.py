@@ -57,10 +57,15 @@ for line in open(args.script):
             silence = np.zeros(int(interval * args.rate))
             data.append(silence)
             # utterance is reverberated using room impulse response
-            preprocess = (
-                "wav-reverberate --print-args=false "
-                " --impulse-response={} - -".format(rir)
-            )
+            # preprocess = (
+            #     "wav-reverberate --print-args=false "
+            #     " --impulse-response={} - -".format(rir)
+            # )
+            preprocess = f"python3 local/wav_reverberate.py --impulse-response={rir} - - |"
+            # preprocess = (
+            # f"sox {rir} -t wav - rate {args.rate} | "
+            # "python3 local/wav_reverberate.py --impulse-response=- - |"
+            # )
             if isinstance(utt, list):
                 rec, st, et = utt
                 st = np.rint(st * args.rate).astype(int)

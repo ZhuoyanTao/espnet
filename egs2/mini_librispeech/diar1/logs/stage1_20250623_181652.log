@@ -1,0 +1,889 @@
+2025-06-23T18:47:19 (diar.sh:141:main) ./diar.sh --collar 0.0 --train_set simu/data/train_clean_5_ns2_beta2_500 --valid_set simu/data/dev_clean_2_ns2_beta2_500 --test_sets simu/data/dev_clean_2_ns2_beta2_500 --ngpu 1 --diar_config conf/train_diar.yaml --inference_config conf/decode_diar.yaml --inference_nj 5 --local_data_opts --stage 0 --stage 1 --stop_stage 1
+2025-06-23T18:47:32 (diar.sh:193:main) Stage 1: Data preparation for data/simu/data/train_clean_5_ns2_beta2_500, data/simu/data/dev_clean_2_ns2_beta2_500, etc.
+ Stage 1: prepare simulation sources
+local/download_and_untar.sh: data part dev-clean-2 was already successfully extracted, nothing to do.
+local/download_and_untar.sh: data part train-clean-5 was already successfully extracted, nothing to do.
+simulation of mixture
+/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/utils/validate_data_dir.sh: Error: in data/simu/data/train_clean_5_ns2_beta2_500, recording-ids extracted from segments and reco2dur file
+/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/utils/validate_data_dir.sh: differ, partial diff is:
+--- /tmp/kaldi.uTdO/recordings	2025-06-23 18:47:33.827182298 -0400
++++ /tmp/kaldi.uTdO/recordings.reco2dur	2025-06-23 18:47:33.845182122 -0400
+@@ -1,500 +0,0 @@
+-data_simu_wav_train_clean_5_ns2_beta2_500_10_mix_0000451
+-data_simu_wav_train_clean_5_ns2_beta2_500_10_mix_0000452
+-data_simu_wav_train_clean_5_ns2_beta2_500_10_mix_0000453
+...
+-data_simu_wav_train_clean_5_ns2_beta2_500_9_mix_0000445
+-data_simu_wav_train_clean_5_ns2_beta2_500_9_mix_0000446
+-data_simu_wav_train_clean_5_ns2_beta2_500_9_mix_0000447
+-data_simu_wav_train_clean_5_ns2_beta2_500_9_mix_0000448
+-data_simu_wav_train_clean_5_ns2_beta2_500_9_mix_0000449
+-data_simu_wav_train_clean_5_ns2_beta2_500_9_mix_0000450
+[Lengths are /tmp/kaldi.uTdO/recordings=500 versus /tmp/kaldi.uTdO/recordings.reco2dur=0]
+generate random mixture
+/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/utils/slurm.pl: 10 / 10 failed, log is in data/simu/.work/make_mixture_train_clean_5_ns2_beta2_500.*.log
+# Running on r043.ib.bridges2.psc.edu
+# Started at Mon Jun 23 18:52:31 EDT 2025
+# SLURMD_NODENAME=r043
+# SLURM_ARRAY_JOB_ID=32941880
+# SLURM_ARRAY_TASK_COUNT=10
+# SLURM_ARRAY_TASK_ID=1
+# SLURM_ARRAY_TASK_MAX=10
+# SLURM_ARRAY_TASK_MIN=1
+# SLURM_ARRAY_TASK_STEP=1
+# SLURM_CLUSTER_NAME=bridges2
+# SLURM_CONF=/var/spool/slurm/d/conf-cache/slurm.conf
+# SLURM_CPUS_ON_NODE=1
+# SLURM_EXPORT_ENV=ALL
+# SLURM_GET_USER_ENV=1
+# SLURM_GTIDS=0
+# SLURM_JOBID=32941886
+# SLURM_JOB_ACCOUNT=cis210027p
+# SLURM_JOB_CPUS_PER_NODE=1
+# SLURM_JOB_GID=24886
+# SLURM_JOB_ID=32941886
+# SLURM_JOB_NAME=make_mixture_train_clean_5_ns2_beta2_500.sh
+# SLURM_JOB_NODELIST=r043
+# SLURM_JOB_NUM_NODES=1
+# SLURM_JOB_PARTITION=RM-shared
+# SLURM_JOB_QOS=rm
+# SLURM_JOB_UID=97947
+# SLURM_JOB_USER=ttao3
+# SLURM_LOCALID=0
+# SLURM_MEM_PER_CPU=1900
+# SLURM_NNODES=1
+# SLURM_NODEID=0
+# SLURM_NODELIST=r043
+# SLURM_NODE_ALIASES='(null)'
+# SLURM_OPEN_MODE=a
+# SLURM_PRIO_PROCESS=0
+# SLURM_PROCID=0
+# SLURM_SCRIPT_CONTEXT=prolog_task
+# SLURM_SUBMIT_DIR=/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+# SLURM_SUBMIT_HOST=br014.ib.bridges2.psc.edu
+# SLURM_TASKS_PER_NODE=1
+# SLURM_TASK_PID=2729
+# SLURM_TOPOLOGY_ADDR=r043
+# SLURM_TOPOLOGY_ADDR_PATTERN=node
+# SLURM_WORKING_CLUSTER=bridges2:br003:6810:9728:109
+# make_mixture.py --rate=8000 data/simu/.work/mixture_train_clean_5_ns2_beta2_500.1.scp data/simu/.work/data_train_clean_5_ns2_beta2_500.1 data/simu/wav/train_clean_5_ns2_beta2_500/1 
+Exception ignored from cffi callback <function SoundFile._init_virtual_io.<locals>.vio_get_filelen at 0x153eb27d04c0>:
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1279, in vio_get_filelen
+    curr = file.tell()
+OSError: [Errno 29] Illegal seek
+Exception ignored from cffi callback <function SoundFile._init_virtual_io.<locals>.vio_tell at 0x153eb27d0790>:
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1315, in vio_tell
+    return file.tell()
+OSError: [Errno 29] Illegal seek
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 154, in <module>
+    main()
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 83, in main
+    sig, fs = read_wav(args.input_wav, args.input_channel)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 15, in read_wav
+    data, fs = sf.read(sys.stdin.buffer, dtype='float32')
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BufferedReader name='<stdin>'>: Error in WAV file. No 'data' chunk marker.
+sox FAIL formats: can't open input  `-': WAVE: RIFF header not found
+/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/make_mixture.py", line 82, in <module>
+    speech, _ = common.load_wav(wav_rxfilename, st, et)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/common.py", line 78, in load_wav
+    data, samplerate = sf.read(
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BytesIO object at 0x148223fca770>: Format not recognised.
+# Accounting: begin_time=1750719151
+# Accounting: end_time=1750719159
+# Accounting: time=8 threads=1
+# Finished at Mon Jun 23 18:52:39 EDT 2025 with status 1
+# Running on r187.ib.bridges2.psc.edu
+# Started at Mon Jun 23 18:52:42 EDT 2025
+# SLURMD_NODENAME=r187
+# SLURM_ARRAY_JOB_ID=32941880
+# SLURM_ARRAY_TASK_COUNT=10
+# SLURM_ARRAY_TASK_ID=10
+# SLURM_ARRAY_TASK_MAX=10
+# SLURM_ARRAY_TASK_MIN=1
+# SLURM_ARRAY_TASK_STEP=1
+# SLURM_CLUSTER_NAME=bridges2
+# SLURM_CONF=/var/spool/slurm/d/conf-cache/slurm.conf
+# SLURM_CPUS_ON_NODE=1
+# SLURM_EXPORT_ENV=ALL
+# SLURM_GET_USER_ENV=1
+# SLURM_GTIDS=0
+# SLURM_JOBID=32941880
+# SLURM_JOB_ACCOUNT=cis210027p
+# SLURM_JOB_CPUS_PER_NODE=1
+# SLURM_JOB_GID=24886
+# SLURM_JOB_ID=32941880
+# SLURM_JOB_NAME=make_mixture_train_clean_5_ns2_beta2_500.sh
+# SLURM_JOB_NODELIST=r187
+# SLURM_JOB_NUM_NODES=1
+# SLURM_JOB_PARTITION=RM-shared
+# SLURM_JOB_QOS=rm
+# SLURM_JOB_UID=97947
+# SLURM_JOB_USER=ttao3
+# SLURM_LOCALID=0
+# SLURM_MEM_PER_CPU=1900
+# SLURM_NNODES=1
+# SLURM_NODEID=0
+# SLURM_NODELIST=r187
+# SLURM_NODE_ALIASES='(null)'
+# SLURM_OPEN_MODE=a
+# SLURM_PRIO_PROCESS=0
+# SLURM_PROCID=0
+# SLURM_SCRIPT_CONTEXT=prolog_task
+# SLURM_SUBMIT_DIR=/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+# SLURM_SUBMIT_HOST=br014.ib.bridges2.psc.edu
+# SLURM_TASKS_PER_NODE=1
+# SLURM_TASK_PID=95524
+# SLURM_TOPOLOGY_ADDR=r187
+# SLURM_TOPOLOGY_ADDR_PATTERN=node
+# SLURM_WORKING_CLUSTER=bridges2:br003:6810:9728:109
+# make_mixture.py --rate=8000 data/simu/.work/mixture_train_clean_5_ns2_beta2_500.10.scp data/simu/.work/data_train_clean_5_ns2_beta2_500.10 data/simu/wav/train_clean_5_ns2_beta2_500/10 
+Exception ignored from cffi callback <function SoundFile._init_virtual_io.<locals>.vio_get_filelen at 0x14f58449b4c0>:
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1279, in vio_get_filelen
+    curr = file.tell()
+OSError: [Errno 29] Illegal seek
+Exception ignored from cffi callback <function SoundFile._init_virtual_io.<locals>.vio_tell at 0x14f58449b790>:
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1315, in vio_tell
+    return file.tell()
+OSError: [Errno 29] Illegal seek
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 154, in <module>
+    main()
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 83, in main
+    sig, fs = read_wav(args.input_wav, args.input_channel)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 15, in read_wav
+    data, fs = sf.read(sys.stdin.buffer, dtype='float32')
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BufferedReader name='<stdin>'>: Error in WAV file. No 'data' chunk marker.
+sox FAIL formats: can't open input  `-': WAVE: RIFF header not found
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/make_mixture.py", line 82, in <module>
+    speech, _ = common.load_wav(wav_rxfilename, st, et)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/common.py", line 78, in load_wav
+    data, samplerate = sf.read(
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BytesIO object at 0x14847f4b9040>: Format not recognised.
+# Accounting: begin_time=1750719162
+# Accounting: end_time=1750719178
+# Accounting: time=16 threads=1
+# Finished at Mon Jun 23 18:52:58 EDT 2025 with status 1
+# Running on r043.ib.bridges2.psc.edu
+# Started at Mon Jun 23 18:52:31 EDT 2025
+# SLURMD_NODENAME=r043
+# SLURM_ARRAY_JOB_ID=32941880
+# SLURM_ARRAY_TASK_COUNT=10
+# SLURM_ARRAY_TASK_ID=2
+# SLURM_ARRAY_TASK_MAX=10
+# SLURM_ARRAY_TASK_MIN=1
+# SLURM_ARRAY_TASK_STEP=1
+# SLURM_CLUSTER_NAME=bridges2
+# SLURM_CONF=/var/spool/slurm/d/conf-cache/slurm.conf
+# SLURM_CPUS_ON_NODE=1
+# SLURM_EXPORT_ENV=ALL
+# SLURM_GET_USER_ENV=1
+# SLURM_GTIDS=0
+# SLURM_JOBID=32941887
+# SLURM_JOB_ACCOUNT=cis210027p
+# SLURM_JOB_CPUS_PER_NODE=1
+# SLURM_JOB_GID=24886
+# SLURM_JOB_ID=32941887
+# SLURM_JOB_NAME=make_mixture_train_clean_5_ns2_beta2_500.sh
+# SLURM_JOB_NODELIST=r043
+# SLURM_JOB_NUM_NODES=1
+# SLURM_JOB_PARTITION=RM-shared
+# SLURM_JOB_QOS=rm
+# SLURM_JOB_UID=97947
+# SLURM_JOB_USER=ttao3
+# SLURM_LOCALID=0
+# SLURM_MEM_PER_CPU=1900
+# SLURM_NNODES=1
+# SLURM_NODEID=0
+# SLURM_NODELIST=r043
+# SLURM_NODE_ALIASES='(null)'
+# SLURM_OPEN_MODE=a
+# SLURM_PRIO_PROCESS=0
+# SLURM_PROCID=0
+# SLURM_SCRIPT_CONTEXT=prolog_task
+# SLURM_SUBMIT_DIR=/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+# SLURM_SUBMIT_HOST=br014.ib.bridges2.psc.edu
+# SLURM_TASKS_PER_NODE=1
+# SLURM_TASK_PID=2732
+# SLURM_TOPOLOGY_ADDR=r043
+# SLURM_TOPOLOGY_ADDR_PATTERN=node
+# SLURM_WORKING_CLUSTER=bridges2:br003:6810:9728:109
+# make_mixture.py --rate=8000 data/simu/.work/mixture_train_clean_5_ns2_beta2_500.2.scp data/simu/.work/data_train_clean_5_ns2_beta2_500.2 data/simu/wav/train_clean_5_ns2_beta2_500/2 
+Exception ignored from cffi callback <function SoundFile._init_virtual_io.<locals>.vio_get_filelen at 0x14e0184b44c0>:
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1279, in vio_get_filelen
+    curr = file.tell()
+OSError: [Errno 29] Illegal seek
+Exception ignored from cffi callback <function SoundFile._init_virtual_io.<locals>.vio_tell at 0x14e0184b4790>:
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1315, in vio_tell
+    return file.tell()
+OSError: [Errno 29] Illegal seek
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 154, in <module>
+    main()
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 83, in main
+    sig, fs = read_wav(args.input_wav, args.input_channel)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 15, in read_wav
+    data, fs = sf.read(sys.stdin.buffer, dtype='float32')
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BufferedReader name='<stdin>'>: Error in WAV file. No 'data' chunk marker.
+sox FAIL formats: can't open input  `-': WAVE: RIFF header not found
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/make_mixture.py", line 82, in <module>
+    speech, _ = common.load_wav(wav_rxfilename, st, et)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/common.py", line 78, in load_wav
+    data, samplerate = sf.read(
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BytesIO object at 0x14c43a752090>: Format not recognised.
+# Accounting: begin_time=1750719151
+# Accounting: end_time=1750719152
+# Accounting: time=1 threads=1
+# Finished at Mon Jun 23 18:52:32 EDT 2025 with status 1
+# Running on r045.ib.bridges2.psc.edu
+# Started at Mon Jun 23 18:52:31 EDT 2025
+# SLURMD_NODENAME=r045
+# SLURM_ARRAY_JOB_ID=32941880
+# SLURM_ARRAY_TASK_COUNT=10
+# SLURM_ARRAY_TASK_ID=3
+# SLURM_ARRAY_TASK_MAX=10
+# SLURM_ARRAY_TASK_MIN=1
+# SLURM_ARRAY_TASK_STEP=1
+# SLURM_CLUSTER_NAME=bridges2
+# SLURM_CONF=/var/spool/slurm/d/conf-cache/slurm.conf
+# SLURM_CPUS_ON_NODE=1
+# SLURM_EXPORT_ENV=ALL
+# SLURM_GET_USER_ENV=1
+# SLURM_GTIDS=0
+# SLURM_JOBID=32941888
+# SLURM_JOB_ACCOUNT=cis210027p
+# SLURM_JOB_CPUS_PER_NODE=1
+# SLURM_JOB_GID=24886
+# SLURM_JOB_ID=32941888
+# SLURM_JOB_NAME=make_mixture_train_clean_5_ns2_beta2_500.sh
+# SLURM_JOB_NODELIST=r045
+# SLURM_JOB_NUM_NODES=1
+# SLURM_JOB_PARTITION=RM-shared
+# SLURM_JOB_QOS=rm
+# SLURM_JOB_UID=97947
+# SLURM_JOB_USER=ttao3
+# SLURM_LOCALID=0
+# SLURM_MEM_PER_CPU=1900
+# SLURM_NNODES=1
+# SLURM_NODEID=0
+# SLURM_NODELIST=r045
+# SLURM_NODE_ALIASES='(null)'
+# SLURM_OPEN_MODE=a
+# SLURM_PRIO_PROCESS=0
+# SLURM_PROCID=0
+# SLURM_SCRIPT_CONTEXT=prolog_task
+# SLURM_SUBMIT_DIR=/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+# SLURM_SUBMIT_HOST=br014.ib.bridges2.psc.edu
+# SLURM_TASKS_PER_NODE=1
+# SLURM_TASK_PID=3468
+# SLURM_TOPOLOGY_ADDR=r045
+# SLURM_TOPOLOGY_ADDR_PATTERN=node
+# SLURM_WORKING_CLUSTER=bridges2:br003:6810:9728:109
+# make_mixture.py --rate=8000 data/simu/.work/mixture_train_clean_5_ns2_beta2_500.3.scp data/simu/.work/data_train_clean_5_ns2_beta2_500.3 data/simu/wav/train_clean_5_ns2_beta2_500/3 
+Exception ignored from cffi callback <function SoundFile._init_virtual_io.<locals>.vio_get_filelen at 0x15241ae4a4c0>:
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1279, in vio_get_filelen
+    curr = file.tell()
+OSError: [Errno 29] Illegal seek
+Exception ignored from cffi callback <function SoundFile._init_virtual_io.<locals>.vio_tell at 0x15241ae4a790>:
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1315, in vio_tell
+    return file.tell()
+OSError: [Errno 29] Illegal seek
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 154, in <module>
+    main()
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 83, in main
+    sig, fs = read_wav(args.input_wav, args.input_channel)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 15, in read_wav
+    data, fs = sf.read(sys.stdin.buffer, dtype='float32')
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BufferedReader name='<stdin>'>: Error in WAV file. No 'data' chunk marker.
+sox FAIL formats: can't open input  `-': WAVE: RIFF header not found
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/make_mixture.py", line 82, in <module>
+    speech, _ = common.load_wav(wav_rxfilename, st, et)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/common.py", line 78, in load_wav
+    data, samplerate = sf.read(
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BytesIO object at 0x14877ba00450>: Format not recognised.
+# Accounting: begin_time=1750719151
+# Accounting: end_time=1750719152
+# Accounting: time=1 threads=1
+# Finished at Mon Jun 23 18:52:32 EDT 2025 with status 1
+# Running on r045.ib.bridges2.psc.edu
+# Started at Mon Jun 23 18:52:31 EDT 2025
+# SLURMD_NODENAME=r045
+# SLURM_ARRAY_JOB_ID=32941880
+# SLURM_ARRAY_TASK_COUNT=10
+# SLURM_ARRAY_TASK_ID=4
+# SLURM_ARRAY_TASK_MAX=10
+# SLURM_ARRAY_TASK_MIN=1
+# SLURM_ARRAY_TASK_STEP=1
+# SLURM_CLUSTER_NAME=bridges2
+# SLURM_CONF=/var/spool/slurm/d/conf-cache/slurm.conf
+# SLURM_CPUS_ON_NODE=1
+# SLURM_EXPORT_ENV=ALL
+# SLURM_GET_USER_ENV=1
+# SLURM_GTIDS=0
+# SLURM_JOBID=32941889
+# SLURM_JOB_ACCOUNT=cis210027p
+# SLURM_JOB_CPUS_PER_NODE=1
+# SLURM_JOB_GID=24886
+# SLURM_JOB_ID=32941889
+# SLURM_JOB_NAME=make_mixture_train_clean_5_ns2_beta2_500.sh
+# SLURM_JOB_NODELIST=r045
+# SLURM_JOB_NUM_NODES=1
+# SLURM_JOB_PARTITION=RM-shared
+# SLURM_JOB_QOS=rm
+# SLURM_JOB_UID=97947
+# SLURM_JOB_USER=ttao3
+# SLURM_LOCALID=0
+# SLURM_MEM_PER_CPU=1900
+# SLURM_NNODES=1
+# SLURM_NODEID=0
+# SLURM_NODELIST=r045
+# SLURM_NODE_ALIASES='(null)'
+# SLURM_OPEN_MODE=a
+# SLURM_PRIO_PROCESS=0
+# SLURM_PROCID=0
+# SLURM_SCRIPT_CONTEXT=prolog_task
+# SLURM_SUBMIT_DIR=/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+# SLURM_SUBMIT_HOST=br014.ib.bridges2.psc.edu
+# SLURM_TASKS_PER_NODE=1
+# SLURM_TASK_PID=3452
+# SLURM_TOPOLOGY_ADDR=r045
+# SLURM_TOPOLOGY_ADDR_PATTERN=node
+# SLURM_WORKING_CLUSTER=bridges2:br003:6810:9728:109
+# make_mixture.py --rate=8000 data/simu/.work/mixture_train_clean_5_ns2_beta2_500.4.scp data/simu/.work/data_train_clean_5_ns2_beta2_500.4 data/simu/wav/train_clean_5_ns2_beta2_500/4 
+Exception ignored from cffi callback <function SoundFile._init_virtual_io.<locals>.vio_get_filelen at 0x14dd4bb664c0>:
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1279, in vio_get_filelen
+    curr = file.tell()
+OSError: [Errno 29] Illegal seek
+Exception ignored from cffi callback <function SoundFile._init_virtual_io.<locals>.vio_tell at 0x14dd4bb66790>:
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1315, in vio_tell
+    return file.tell()
+OSError: [Errno 29] Illegal seek
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 154, in <module>
+    main()
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 83, in main
+    sig, fs = read_wav(args.input_wav, args.input_channel)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 15, in read_wav
+    data, fs = sf.read(sys.stdin.buffer, dtype='float32')
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BufferedReader name='<stdin>'>: Error in WAV file. No 'data' chunk marker.
+sox FAIL formats: can't open input  `-': WAVE: RIFF header not found
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/make_mixture.py", line 82, in <module>
+    speech, _ = common.load_wav(wav_rxfilename, st, et)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/common.py", line 78, in load_wav
+    data, samplerate = sf.read(
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BytesIO object at 0x1482b283ebd0>: Format not recognised.
+# Accounting: begin_time=1750719151
+# Accounting: end_time=1750719152
+# Accounting: time=1 threads=1
+# Finished at Mon Jun 23 18:52:32 EDT 2025 with status 1
+# Running on r045.ib.bridges2.psc.edu
+# Started at Mon Jun 23 18:52:31 EDT 2025
+# SLURMD_NODENAME=r045
+# SLURM_ARRAY_JOB_ID=32941880
+# SLURM_ARRAY_TASK_COUNT=10
+# SLURM_ARRAY_TASK_ID=5
+# SLURM_ARRAY_TASK_MAX=10
+# SLURM_ARRAY_TASK_MIN=1
+# SLURM_ARRAY_TASK_STEP=1
+# SLURM_CLUSTER_NAME=bridges2
+# SLURM_CONF=/var/spool/slurm/d/conf-cache/slurm.conf
+# SLURM_CPUS_ON_NODE=1
+# SLURM_EXPORT_ENV=ALL
+# SLURM_GET_USER_ENV=1
+# SLURM_GTIDS=0
+# SLURM_JOBID=32941890
+# SLURM_JOB_ACCOUNT=cis210027p
+# SLURM_JOB_CPUS_PER_NODE=1
+# SLURM_JOB_GID=24886
+# SLURM_JOB_ID=32941890
+# SLURM_JOB_NAME=make_mixture_train_clean_5_ns2_beta2_500.sh
+# SLURM_JOB_NODELIST=r045
+# SLURM_JOB_NUM_NODES=1
+# SLURM_JOB_PARTITION=RM-shared
+# SLURM_JOB_QOS=rm
+# SLURM_JOB_UID=97947
+# SLURM_JOB_USER=ttao3
+# SLURM_LOCALID=0
+# SLURM_MEM_PER_CPU=1900
+# SLURM_NNODES=1
+# SLURM_NODEID=0
+# SLURM_NODELIST=r045
+# SLURM_NODE_ALIASES='(null)'
+# SLURM_OPEN_MODE=a
+# SLURM_PRIO_PROCESS=0
+# SLURM_PROCID=0
+# SLURM_SCRIPT_CONTEXT=prolog_task
+# SLURM_SUBMIT_DIR=/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+# SLURM_SUBMIT_HOST=br014.ib.bridges2.psc.edu
+# SLURM_TASKS_PER_NODE=1
+# SLURM_TASK_PID=3480
+# SLURM_TOPOLOGY_ADDR=r045
+# SLURM_TOPOLOGY_ADDR_PATTERN=node
+# SLURM_WORKING_CLUSTER=bridges2:br003:6810:9728:109
+# make_mixture.py --rate=8000 data/simu/.work/mixture_train_clean_5_ns2_beta2_500.5.scp data/simu/.work/data_train_clean_5_ns2_beta2_500.5 data/simu/wav/train_clean_5_ns2_beta2_500/5 
+Exception ignored from cffi callback <function SoundFile._init_virtual_io.<locals>.vio_get_filelen at 0x14d4fb5764c0>:
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1279, in vio_get_filelen
+    curr = file.tell()
+OSError: [Errno 29] Illegal seek
+Exception ignored from cffi callback <function SoundFile._init_virtual_io.<locals>.vio_tell at 0x14d4fb576790>:
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1315, in vio_tell
+    return file.tell()
+OSError: [Errno 29] Illegal seek
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 154, in <module>
+    main()
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 83, in main
+    sig, fs = read_wav(args.input_wav, args.input_channel)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 15, in read_wav
+    data, fs = sf.read(sys.stdin.buffer, dtype='float32')
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BufferedReader name='<stdin>'>: Error in WAV file. No 'data' chunk marker.
+sox FAIL formats: can't open input  `-': WAVE: RIFF header not found
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/make_mixture.py", line 82, in <module>
+    speech, _ = common.load_wav(wav_rxfilename, st, et)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/common.py", line 78, in load_wav
+    data, samplerate = sf.read(
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BytesIO object at 0x14fb3fa402c0>: Format not recognised.
+# Accounting: begin_time=1750719151
+# Accounting: end_time=1750719152
+# Accounting: time=1 threads=1
+# Finished at Mon Jun 23 18:52:32 EDT 2025 with status 1
+# Running on r045.ib.bridges2.psc.edu
+# Started at Mon Jun 23 18:52:31 EDT 2025
+# SLURMD_NODENAME=r045
+# SLURM_ARRAY_JOB_ID=32941880
+# SLURM_ARRAY_TASK_COUNT=10
+# SLURM_ARRAY_TASK_ID=6
+# SLURM_ARRAY_TASK_MAX=10
+# SLURM_ARRAY_TASK_MIN=1
+# SLURM_ARRAY_TASK_STEP=1
+# SLURM_CLUSTER_NAME=bridges2
+# SLURM_CONF=/var/spool/slurm/d/conf-cache/slurm.conf
+# SLURM_CPUS_ON_NODE=1
+# SLURM_EXPORT_ENV=ALL
+# SLURM_GET_USER_ENV=1
+# SLURM_GTIDS=0
+# SLURM_JOBID=32941891
+# SLURM_JOB_ACCOUNT=cis210027p
+# SLURM_JOB_CPUS_PER_NODE=1
+# SLURM_JOB_GID=24886
+# SLURM_JOB_ID=32941891
+# SLURM_JOB_NAME=make_mixture_train_clean_5_ns2_beta2_500.sh
+# SLURM_JOB_NODELIST=r045
+# SLURM_JOB_NUM_NODES=1
+# SLURM_JOB_PARTITION=RM-shared
+# SLURM_JOB_QOS=rm
+# SLURM_JOB_UID=97947
+# SLURM_JOB_USER=ttao3
+# SLURM_LOCALID=0
+# SLURM_MEM_PER_CPU=1900
+# SLURM_NNODES=1
+# SLURM_NODEID=0
+# SLURM_NODELIST=r045
+# SLURM_NODE_ALIASES='(null)'
+# SLURM_OPEN_MODE=a
+# SLURM_PRIO_PROCESS=0
+# SLURM_PROCID=0
+# SLURM_SCRIPT_CONTEXT=prolog_task
+# SLURM_SUBMIT_DIR=/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+# SLURM_SUBMIT_HOST=br014.ib.bridges2.psc.edu
+# SLURM_TASKS_PER_NODE=1
+# SLURM_TASK_PID=3471
+# SLURM_TOPOLOGY_ADDR=r045
+# SLURM_TOPOLOGY_ADDR_PATTERN=node
+# SLURM_WORKING_CLUSTER=bridges2:br003:6810:9728:109
+# make_mixture.py --rate=8000 data/simu/.work/mixture_train_clean_5_ns2_beta2_500.6.scp data/simu/.work/data_train_clean_5_ns2_beta2_500.6 data/simu/wav/train_clean_5_ns2_beta2_500/6 
+Exception ignored from cffi callback <function SoundFile._init_virtual_io.<locals>.vio_get_filelen at 0x1527503684c0>:
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1279, in vio_get_filelen
+    curr = file.tell()
+OSError: [Errno 29] Illegal seek
+Exception ignored from cffi callback <function SoundFile._init_virtual_io.<locals>.vio_tell at 0x152750368790>:
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1315, in vio_tell
+    return file.tell()
+OSError: [Errno 29] Illegal seek
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 154, in <module>
+    main()
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 83, in main
+    sig, fs = read_wav(args.input_wav, args.input_channel)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 15, in read_wav
+    data, fs = sf.read(sys.stdin.buffer, dtype='float32')
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BufferedReader name='<stdin>'>: Error in WAV file. No 'data' chunk marker.
+sox FAIL formats: can't open input  `-': WAVE: RIFF header not found
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/make_mixture.py", line 82, in <module>
+    speech, _ = common.load_wav(wav_rxfilename, st, et)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/common.py", line 78, in load_wav
+    data, samplerate = sf.read(
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BytesIO object at 0x151c1dfd9270>: Format not recognised.
+# Accounting: begin_time=1750719151
+# Accounting: end_time=1750719152
+# Accounting: time=1 threads=1
+# Finished at Mon Jun 23 18:52:32 EDT 2025 with status 1
+# Running on r187.ib.bridges2.psc.edu
+# Started at Mon Jun 23 18:52:42 EDT 2025
+# SLURMD_NODENAME=r187
+# SLURM_ARRAY_JOB_ID=32941880
+# SLURM_ARRAY_TASK_COUNT=10
+# SLURM_ARRAY_TASK_ID=7
+# SLURM_ARRAY_TASK_MAX=10
+# SLURM_ARRAY_TASK_MIN=1
+# SLURM_ARRAY_TASK_STEP=1
+# SLURM_CLUSTER_NAME=bridges2
+# SLURM_CONF=/var/spool/slurm/d/conf-cache/slurm.conf
+# SLURM_CPUS_ON_NODE=1
+# SLURM_EXPORT_ENV=ALL
+# SLURM_GET_USER_ENV=1
+# SLURM_GTIDS=0
+# SLURM_JOBID=32941892
+# SLURM_JOB_ACCOUNT=cis210027p
+# SLURM_JOB_CPUS_PER_NODE=1
+# SLURM_JOB_GID=24886
+# SLURM_JOB_ID=32941892
+# SLURM_JOB_NAME=make_mixture_train_clean_5_ns2_beta2_500.sh
+# SLURM_JOB_NODELIST=r187
+# SLURM_JOB_NUM_NODES=1
+# SLURM_JOB_PARTITION=RM-shared
+# SLURM_JOB_QOS=rm
+# SLURM_JOB_UID=97947
+# SLURM_JOB_USER=ttao3
+# SLURM_LOCALID=0
+# SLURM_MEM_PER_CPU=1900
+# SLURM_NNODES=1
+# SLURM_NODEID=0
+# SLURM_NODELIST=r187
+# SLURM_NODE_ALIASES='(null)'
+# SLURM_OPEN_MODE=a
+# SLURM_PRIO_PROCESS=0
+# SLURM_PROCID=0
+# SLURM_SCRIPT_CONTEXT=prolog_task
+# SLURM_SUBMIT_DIR=/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+# SLURM_SUBMIT_HOST=br014.ib.bridges2.psc.edu
+# SLURM_TASKS_PER_NODE=1
+# SLURM_TASK_PID=95529
+# SLURM_TOPOLOGY_ADDR=r187
+# SLURM_TOPOLOGY_ADDR_PATTERN=node
+# SLURM_WORKING_CLUSTER=bridges2:br003:6810:9728:109
+# make_mixture.py --rate=8000 data/simu/.work/mixture_train_clean_5_ns2_beta2_500.7.scp data/simu/.work/data_train_clean_5_ns2_beta2_500.7 data/simu/wav/train_clean_5_ns2_beta2_500/7 
+Exception ignored from cffi callback <function SoundFile._init_virtual_io.<locals>.vio_get_filelen at 0x14f5e08af4c0>:
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1279, in vio_get_filelen
+    curr = file.tell()
+OSError: [Errno 29] Illegal seek
+Exception ignored from cffi callback <function SoundFile._init_virtual_io.<locals>.vio_tell at 0x14f5e08af790>:
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1315, in vio_tell
+    return file.tell()
+OSError: [Errno 29] Illegal seek
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 154, in <module>
+    main()
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 83, in main
+    sig, fs = read_wav(args.input_wav, args.input_channel)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 15, in read_wav
+    data, fs = sf.read(sys.stdin.buffer, dtype='float32')
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BufferedReader name='<stdin>'>: Error in WAV file. No 'data' chunk marker.
+sox FAIL formats: can't open input  `-': WAVE: RIFF header not found
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/make_mixture.py", line 82, in <module>
+    speech, _ = common.load_wav(wav_rxfilename, st, et)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/common.py", line 78, in load_wav
+    data, samplerate = sf.read(
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BytesIO object at 0x153a81330450>: Format not recognised.
+# Accounting: begin_time=1750719162
+# Accounting: end_time=1750719178
+# Accounting: time=16 threads=1
+# Finished at Mon Jun 23 18:52:58 EDT 2025 with status 1
+# Running on r187.ib.bridges2.psc.edu
+# Started at Mon Jun 23 18:52:42 EDT 2025
+# SLURMD_NODENAME=r187
+# SLURM_ARRAY_JOB_ID=32941880
+# SLURM_ARRAY_TASK_COUNT=10
+# SLURM_ARRAY_TASK_ID=8
+# SLURM_ARRAY_TASK_MAX=10
+# SLURM_ARRAY_TASK_MIN=1
+# SLURM_ARRAY_TASK_STEP=1
+# SLURM_CLUSTER_NAME=bridges2
+# SLURM_CONF=/var/spool/slurm/d/conf-cache/slurm.conf
+# SLURM_CPUS_ON_NODE=1
+# SLURM_EXPORT_ENV=ALL
+# SLURM_GET_USER_ENV=1
+# SLURM_GTIDS=0
+# SLURM_JOBID=32941893
+# SLURM_JOB_ACCOUNT=cis210027p
+# SLURM_JOB_CPUS_PER_NODE=1
+# SLURM_JOB_GID=24886
+# SLURM_JOB_ID=32941893
+# SLURM_JOB_NAME=make_mixture_train_clean_5_ns2_beta2_500.sh
+# SLURM_JOB_NODELIST=r187
+# SLURM_JOB_NUM_NODES=1
+# SLURM_JOB_PARTITION=RM-shared
+# SLURM_JOB_QOS=rm
+# SLURM_JOB_UID=97947
+# SLURM_JOB_USER=ttao3
+# SLURM_LOCALID=0
+# SLURM_MEM_PER_CPU=1900
+# SLURM_NNODES=1
+# SLURM_NODEID=0
+# SLURM_NODELIST=r187
+# SLURM_NODE_ALIASES='(null)'
+# SLURM_OPEN_MODE=a
+# SLURM_PRIO_PROCESS=0
+# SLURM_PROCID=0
+# SLURM_SCRIPT_CONTEXT=prolog_task
+# SLURM_SUBMIT_DIR=/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+# SLURM_SUBMIT_HOST=br014.ib.bridges2.psc.edu
+# SLURM_TASKS_PER_NODE=1
+# SLURM_TASK_PID=95528
+# SLURM_TOPOLOGY_ADDR=r187
+# SLURM_TOPOLOGY_ADDR_PATTERN=node
+# SLURM_WORKING_CLUSTER=bridges2:br003:6810:9728:109
+# make_mixture.py --rate=8000 data/simu/.work/mixture_train_clean_5_ns2_beta2_500.8.scp data/simu/.work/data_train_clean_5_ns2_beta2_500.8 data/simu/wav/train_clean_5_ns2_beta2_500/8 
+Exception ignored from cffi callback <function SoundFile._init_virtual_io.<locals>.vio_get_filelen at 0x149dab1784c0>:
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1279, in vio_get_filelen
+    curr = file.tell()
+OSError: [Errno 29] Illegal seek
+Exception ignored from cffi callback <function SoundFile._init_virtual_io.<locals>.vio_tell at 0x149dab178790>:
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1315, in vio_tell
+    return file.tell()
+OSError: [Errno 29] Illegal seek
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 154, in <module>
+    main()
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 83, in main
+    sig, fs = read_wav(args.input_wav, args.input_channel)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 15, in read_wav
+    data, fs = sf.read(sys.stdin.buffer, dtype='float32')
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BufferedReader name='<stdin>'>: Error in WAV file. No 'data' chunk marker.
+sox FAIL formats: can't open input  `-': WAVE: RIFF header not found
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/make_mixture.py", line 82, in <module>
+    speech, _ = common.load_wav(wav_rxfilename, st, et)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/common.py", line 78, in load_wav
+    data, samplerate = sf.read(
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BytesIO object at 0x14b6847f39f0>: Format not recognised.
+# Accounting: begin_time=1750719162
+# Accounting: end_time=1750719178
+# Accounting: time=16 threads=1
+# Finished at Mon Jun 23 18:52:58 EDT 2025 with status 1
+# Running on r187.ib.bridges2.psc.edu
+# Started at Mon Jun 23 18:52:42 EDT 2025
+# SLURMD_NODENAME=r187
+# SLURM_ARRAY_JOB_ID=32941880
+# SLURM_ARRAY_TASK_COUNT=10
+# SLURM_ARRAY_TASK_ID=9
+# SLURM_ARRAY_TASK_MAX=10
+# SLURM_ARRAY_TASK_MIN=1
+# SLURM_ARRAY_TASK_STEP=1
+# SLURM_CLUSTER_NAME=bridges2
+# SLURM_CONF=/var/spool/slurm/d/conf-cache/slurm.conf
+# SLURM_CPUS_ON_NODE=1
+# SLURM_EXPORT_ENV=ALL
+# SLURM_GET_USER_ENV=1
+# SLURM_GTIDS=0
+# SLURM_JOBID=32941894
+# SLURM_JOB_ACCOUNT=cis210027p
+# SLURM_JOB_CPUS_PER_NODE=1
+# SLURM_JOB_GID=24886
+# SLURM_JOB_ID=32941894
+# SLURM_JOB_NAME=make_mixture_train_clean_5_ns2_beta2_500.sh
+# SLURM_JOB_NODELIST=r187
+# SLURM_JOB_NUM_NODES=1
+# SLURM_JOB_PARTITION=RM-shared
+# SLURM_JOB_QOS=rm
+# SLURM_JOB_UID=97947
+# SLURM_JOB_USER=ttao3
+# SLURM_LOCALID=0
+# SLURM_MEM_PER_CPU=1900
+# SLURM_NNODES=1
+# SLURM_NODEID=0
+# SLURM_NODELIST=r187
+# SLURM_NODE_ALIASES='(null)'
+# SLURM_OPEN_MODE=a
+# SLURM_PRIO_PROCESS=0
+# SLURM_PROCID=0
+# SLURM_SCRIPT_CONTEXT=prolog_task
+# SLURM_SUBMIT_DIR=/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1
+# SLURM_SUBMIT_HOST=br014.ib.bridges2.psc.edu
+# SLURM_TASKS_PER_NODE=1
+# SLURM_TASK_PID=95527
+# SLURM_TOPOLOGY_ADDR=r187
+# SLURM_TOPOLOGY_ADDR_PATTERN=node
+# SLURM_WORKING_CLUSTER=bridges2:br003:6810:9728:109
+# make_mixture.py --rate=8000 data/simu/.work/mixture_train_clean_5_ns2_beta2_500.9.scp data/simu/.work/data_train_clean_5_ns2_beta2_500.9 data/simu/wav/train_clean_5_ns2_beta2_500/9 
+Exception ignored from cffi callback <function SoundFile._init_virtual_io.<locals>.vio_get_filelen at 0x1483742904c0>:
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1279, in vio_get_filelen
+    curr = file.tell()
+OSError: [Errno 29] Illegal seek
+Exception ignored from cffi callback <function SoundFile._init_virtual_io.<locals>.vio_tell at 0x148374290790>:
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1315, in vio_tell
+    return file.tell()
+OSError: [Errno 29] Illegal seek
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 154, in <module>
+    main()
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 83, in main
+    sig, fs = read_wav(args.input_wav, args.input_channel)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/wav_reverberate.py", line 15, in read_wav
+    data, fs = sf.read(sys.stdin.buffer, dtype='float32')
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BufferedReader name='<stdin>'>: Error in WAV file. No 'data' chunk marker.
+sox FAIL formats: can't open input  `-': WAVE: RIFF header not found
+Traceback (most recent call last):
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/make_mixture.py", line 82, in <module>
+    speech, _ = common.load_wav(wav_rxfilename, st, et)
+  File "/ocean/projects/cis210027p/ttao3/espnet/egs2/mini_librispeech/diar1/local/simulation/common.py", line 78, in load_wav
+    data, samplerate = sf.read(
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 305, in read
+    with SoundFile(file, 'r', samplerate, channels,
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 690, in __init__
+    self._file = self._open(file, mode_int, closefd)
+  File "/ocean/projects/cis210027p/ttao3/miniconda3/envs/espnet/lib/python3.9/site-packages/soundfile.py", line 1265, in _open
+    raise LibsndfileError(err, prefix="Error opening {0!r}: ".format(self.name))
+soundfile.LibsndfileError: Error opening <_io.BytesIO object at 0x14ae2b0755e0>: Format not recognised.
+# Accounting: begin_time=1750719162
+# Accounting: end_time=1750719178
+# Accounting: time=16 threads=1
+# Finished at Mon Jun 23 18:52:58 EDT 2025 with status 1
