@@ -34,7 +34,7 @@ db_root=${LIBRITTS}
 data_url=www.openslr.org/resources/141
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
-    log "stage -1: local/donwload_and_untar.sh"
+    log "stage -1: local/download_and_untar.sh"
     # download the original corpus
     if [ ! -e "${db_root}"/LibriTTS/.complete ]; then
         for part in dev-clean dev-other test-clean test-other train-clean-100 train-clean-360 train-other-500; do
