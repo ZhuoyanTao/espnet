@@ -69,7 +69,7 @@ f0max=400 # Minimum f0 for pitch extraction.
 use_spk_embed=false      # Whether to use speaker embedding.
 spk_embed_tag=espnet_spk # The additional tag of speaker embedding folder, use "xvector" for compatibility.
 spk_embed_gpu_inference=false # Whether to use gpu to inference speaker embedding.
-spk_embed_tool=espnet    # Toolkit for extracting x-vector (speechbrain, rawnet, espnet, kaldi).
+spk_embed_tool=rawnet    # Toolkit for extracting x-vector (speechbrain, rawnet, espnet, kaldi).
 spk_embed_model=espnet/voxcelebs12_rawnet3  # For only espnet, speechbrain, or rawnet.
 
 # Vocabulary related
@@ -503,6 +503,8 @@ if ! "${skip_data_prep}"; then
 
     if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         log "Stage 4: Remove long/short data: ${data_feats}/org -> ${data_feats}"
+        echo "fixing order of speaker‐embed scp to match text"
+        local/sort_spk_embed_scp.sh "${dumpdir}/${fs}/${tag}" "${tag}"
 
         # NOTE(kamo): Not applying to test_sets to keep original data
         for dset in "${train_set}" "${valid_set}"; do
