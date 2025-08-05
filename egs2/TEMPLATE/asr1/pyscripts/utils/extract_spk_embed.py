@@ -40,13 +40,13 @@ def get_parser():
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=16,  # GPU-friendly default – adjust later
+        default=8,  # GPU-friendly default – adjust later
         help="Number of utterances processed together on the GPU",
     )
     parser.add_argument(
         "--prefetch",
         type=int,
-        default=512,
+        default=128,
         help="Max number of outstanding I/O tasks to prefetch.",
     )
     parser.add_argument("--pretrained_model", type=str, help="Pretrained model.")
