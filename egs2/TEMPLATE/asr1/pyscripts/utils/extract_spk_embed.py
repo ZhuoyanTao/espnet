@@ -40,7 +40,7 @@ def get_parser():
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=64,  # GPU-friendly default – adjust later
+        default=16,  # GPU-friendly default – adjust later
         help="Number of utterances processed together on the GPU",
     )
     parser.add_argument(

@@ -39,7 +39,7 @@ local_data_opts="--trim_all_silence true" # trim all silence in the audio
     --n_shift "${n_shift}" \
     --win_length "${win_length}" \
     --use_spk_embed true \
-    --spk_embed_tool rawnet \
+    --spk_embed_tool espnet \
     --spk_embed_tag rawnet \
     --token_type phn \
     --cleaner "${cleaner}" \
