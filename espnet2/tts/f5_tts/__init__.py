@@ -1,0 +1,1 @@
+from espnet2.tts.f5_tts.f5_tts import F5TTS
