@@ -7,6 +7,8 @@ nw - raw wave length
 d - dimension
 """
 
+"""F5 TTS related modules for ESPnet2."""
+
 from __future__ import annotations
 
 from random import random
@@ -161,7 +163,8 @@ class F5TTS(AbsTTS):
         # - Prepare input
         # - Call self.cfm.sample(...) or similar
         # - Return feature dict with 'feat_gen', etc.
-        
+    
+    
     @torch.no_grad()
     def sample(
         self,
