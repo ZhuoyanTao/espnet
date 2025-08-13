@@ -35,10 +35,19 @@ from espnet2.tts.abs_tts import AbsTTS
 import torch
 import torch.nn.functional as F
 
+import importlib
+
+def import_string(path): m, c = path.rsplit(".", 1); return getattr(importlib.import_module(m), c)
+def build_f5_transformer(target: str, **conf): return import_string(target)(**conf)
+
 class F5TTS(AbsTTS):
     def __init__(
         self,
-        transformer: nn.Module,
+        idim: int,      
+        odim: int,  
+        transformer: nn.Module | None = None,        # ← allow None
+        transformer_target: str | None = None,       # ← class path, e.g. "f5_tts.model.transformer.FlowTransformer"
+        transformer_conf: dict | None = None,        # ← kwargs
         sigma=0.0,
         odeint_kwargs: dict = dict(
             # atol = 1e-5,
@@ -54,9 +63,10 @@ class F5TTS(AbsTTS):
         vocab_char_map: dict[str:int] | None = None,
     ):
         super().__init__()
-
+        self.idim = idim
+        self.odim = odim
         self.frac_lengths_mask = frac_lengths_mask
-
+        
         # mel spec
         self.mel_spec = default(mel_spec_module, MelSpec(**mel_spec_kwargs))
         num_channels = default(num_channels, self.mel_spec.n_mel_channels)
@@ -67,9 +77,11 @@ class F5TTS(AbsTTS):
         self.cond_drop_prob = cond_drop_prob
 
         # transformer
+        if transformer is None:
+            assert transformer_target is not None, "Provide transformer or transformer_target"
+            transformer = build_f5_transformer(transformer_target, **(transformer_conf or {}))
         self.transformer = transformer
-        dim = transformer.dim
-        self.dim = dim
+        self.dim = getattr(self.transformer, "dim", None)   # avoid AttributeError
 
         # conditional flow related
         self.sigma = sigma
@@ -80,89 +92,131 @@ class F5TTS(AbsTTS):
         # vocab map for tokenization
         self.vocab_char_map = vocab_char_map
 
+
     @property
     def device(self):
         return next(self.parameters()).device
     
     def forward(
         self,
-        inp: float["b n d"] | float["b nw"],  # mel or raw wave  # noqa: F722
-        text: int["b nt"] | list[str],  # noqa: F722
-        *,
-        lens: int["b"] | None = None,  # noqa: F821
-        noise_scheduler: str | None = None,
-    ):
-        # handle raw wave
-        if inp.ndim == 2:
-            inp = self.mel_spec(inp)
-            inp = inp.permute(0, 2, 1)
-            assert inp.shape[-1] == self.num_channels
+        text: torch.LongTensor,            # (B, Ttxt)
+        text_lengths: torch.LongTensor,    # (B,)
+        feats: torch.FloatTensor,          # (B, Tmel, D)  OR (B, D, T) depending on your choice
+        feats_lengths: torch.LongTensor,   # (B,)
+        sids: torch.LongTensor | None = None,
+        spembs: torch.FloatTensor | None = None,
+        **kwargs,
+    ) -> tuple[torch.Tensor, dict[str, float], float]:
+        
+        if feats.dim() == 3 and feats.shape[1] == self.num_channels:
+            feats = feats.transpose(1, 2)  # (B, D, T) -> (B, T, D)
 
-        batch, seq_len, dtype, device, _σ1 = *inp.shape[:2], inp.dtype, self.device, self.sigma
+        assert feats.dim() == 3, f"feats must be 3D, got {feats.shape}"
+        B, T, D = feats.shape
+        assert D == self.num_channels, f"mel dim {D} != num_channels {self.num_channels}"
+        device, dtype = feats.device, feats.dtype
+        lens = feats_lengths
 
-        # handle text as string
-        if isinstance(text, list):
-            if exists(self.vocab_char_map):
-                text = list_str_to_idx(text, self.vocab_char_map).to(device)
-            else:
-                text = list_str_to_tensor(text).to(device)
-            assert text.shape[0] == batch
+        mask = lens_to_mask(lens, length=T).to(device)  # (B, T)
 
-        # lens and mask
-        if not exists(lens):
-            lens = torch.full((batch,), seq_len, device=device)
+        # random span mask for infilling
+        frac_lengths = torch.zeros((B,), device=device).float().uniform_(*self.frac_lengths_mask)
+        rand_span_mask = mask_from_frac_lengths(lens, frac_lengths) & mask  # (B, T)
 
-        mask = lens_to_mask(lens, length=seq_len)  # useless here, as collate_fn will pad to max length in batch
-
-        # get a random span to mask out for training conditionally
-        frac_lengths = torch.zeros((batch,), device=self.device).float().uniform_(*self.frac_lengths_mask)
-        rand_span_mask = mask_from_frac_lengths(lens, frac_lengths)
-
-        if exists(mask):
-            rand_span_mask &= mask
-
-        # mel is x1
-        x1 = inp
-
-        # x0 is gaussian noise
+        # x1 = ground truth mel; x0 = gaussian
+        x1 = feats
         x0 = torch.randn_like(x1)
 
-        # time step
-        time = torch.rand((batch,), dtype=dtype, device=self.device)
-        # TODO. noise_scheduler
+        # time scalar per sample
+        time = torch.rand((B,), dtype=dtype, device=device)
+        t = time[:, None, None]
 
-        # sample xt (φ_t(x) in the paper)
-        t = time.unsqueeze(-1).unsqueeze(-1)
-        φ = (1 - t) * x0 + t * x1
-        flow = x1 - x0
+        phi = (1 - t) * x0 + t * x1          # φ_t(x)
+        flow = x1 - x0                       # target flow
 
-        # only predict what is within the random mask span for infilling
+        # conditional audio (masked x1)
         cond = torch.where(rand_span_mask[..., None], torch.zeros_like(x1), x1)
 
-        # transformer and cfg training with a drop rate
-        drop_audio_cond = random() < self.audio_drop_prob  # p_drop in voicebox paper
-        if random() < self.cond_drop_prob:  # p_uncond in voicebox paper
-            drop_audio_cond = True
-            drop_text = True
-        else:
-            drop_text = False
+        # classifier-free guidance drops
+        drop_audio_cond = random() < self.audio_drop_prob
+        drop_text = (random() < self.cond_drop_prob)
 
-        # apply mask will use more memory; might adjust batchsize or batchsampler long sequence threshold
+        # text is already int ids from ESPnet
+        txt_in = text if not drop_text else torch.full_like(text, self.null_token_id)
         pred = self.transformer(
-            x=φ, cond=cond, text=text, time=time, drop_audio_cond=drop_audio_cond, drop_text=drop_text, mask=mask
+            x=phi,
+            cond=cond if not drop_audio_cond else torch.zeros_like(cond),
+            text=txt_in,
+            time=time,
+            mask=mask,   # if your transformer wants (B,T,1), use mask.unsqueeze(-1)
         )
 
-        # flow matching loss
-        loss = F.mse_loss(pred, flow, reduction="none")
-        loss = loss[rand_span_mask]
+        loss = F.mse_loss(pred.float(), flow.float(), reduction="none")
+        loss = loss[rand_span_mask]                  # only train on masked span
+        loss = loss.mean()
 
-        return loss.mean(), cond, pred
+        stats = {"loss": float(loss.detach().cpu())}
+        weight = float(feats_lengths.sum().item())   # frame-weighted averaging
+        return loss, stats, weight
 
-    def inference(self, text, ...):
-        # Forward pass for inference (TTS generation)
-        # - Prepare input
-        # - Call self.cfm.sample(...) or similar
-        # - Return feature dict with 'feat_gen', etc.
+
+
+    @torch.no_grad()
+    def inference(
+        self,
+        text: torch.LongTensor,                     # (Ttxt,)
+        sids: torch.LongTensor | None = None,
+        spembs: torch.FloatTensor | None = None,
+        duration: int | None = None,
+        use_ref_audio: bool = False,
+        ref_audio: torch.FloatTensor | None = None, # (D, T) or (T, D)
+        steps: int = 32,
+        cfg_strength: float = 1.0,
+        vocoder: Callable[[torch.FloatTensor], torch.FloatTensor] | None = None,
+        **kwargs,
+    ) -> dict[str, torch.Tensor]:
+        self.eval()
+        B = 1
+
+        # build cond mel
+        if use_ref_audio and ref_audio is not None:
+            if ref_audio.dim() == 2 and ref_audio.shape[0] == self.num_channels:
+                ref = ref_audio.transpose(0, 1)[None, ...]   # (1, T, D)
+            elif ref_audio.dim() == 2:
+                ref = ref_audio[None, ...]                   # (1, T, D)
+            else:
+                # raw waveform -> mel
+                ref = self.mel_spec(ref_audio)[None, ...].transpose(1, 2)
+        else:
+            # no reference -> zeros, length ~ duration
+            T = int(duration or 400)  # pick a sane default
+            ref = torch.zeros((B, T, self.num_channels), device=self.device, dtype=next(self.parameters()).dtype)
+
+
+        out, _ = self.sample(
+            cond=ref,
+            text=text.unsqueeze(0),
+            duration=duration or ref.shape[1],
+            steps=steps,
+            cfg_strength=cfg_strength,
+            vocoder=None,                   # do mel->wav here if you pass one below
+            use_epss=True,
+            no_ref_audio=not use_ref_audio,
+        )
+
+        # out is mel (B, T, D) if no vocoder was used inside sample()
+        if out.dim() == 3:  # mel
+            return {"feat_gen": out.squeeze(0)} if vocoder is None else {"wav": vocoder(out.transpose(1,2)).squeeze(0)}
+        else:               # waveform
+            return {"wav": out.squeeze(0)}
+
+
+    def collect_feats(self, batch):
+        feats = batch["feats"]
+        if feats.dim() == 3 and feats.shape[1] == self.num_channels:
+            feats = feats.transpose(1, 2)
+        return {"feats": feats}
+
     
     
     @torch.no_grad()
@@ -172,6 +226,7 @@ class F5TTS(AbsTTS):
         text: int["b nt"] | list[str],  # noqa: F722
         duration: int | int["b"],  # noqa: F821
         *,
+        text_lengths: torch.LongTensor | None = None,
         lens: int["b"] | None = None,  # noqa: F821
         steps=32,
         cfg_strength=1.0,
@@ -187,7 +242,6 @@ class F5TTS(AbsTTS):
     ):
         self.eval()
         # raw wave
-
         if cond.ndim == 2:
             cond = self.mel_spec(cond)
             cond = cond.permute(0, 2, 1)
@@ -198,17 +252,6 @@ class F5TTS(AbsTTS):
         batch, cond_seq_len, device = *cond.shape[:2], cond.device
         if not exists(lens):
             lens = torch.full((batch,), cond_seq_len, device=device, dtype=torch.long)
-
-        # text
-
-        if isinstance(text, list):
-            if exists(self.vocab_char_map):
-                text = list_str_to_idx(text, self.vocab_char_map).to(device)
-            else:
-                text = list_str_to_tensor(text).to(device)
-            assert text.shape[0] == batch
-
-        # duration
 
         cond_mask = lens_to_mask(lens)
         if edit_mask is not None:
@@ -243,6 +286,7 @@ class F5TTS(AbsTTS):
             mask = None
 
         # neural ode
+        
 
         def fn(t, x):
             # at each step, conditioning is fixed
