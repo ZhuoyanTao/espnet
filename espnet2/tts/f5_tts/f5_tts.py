@@ -32,9 +32,6 @@ from f5_tts.model.utils import (
 )
 
 from espnet2.tts.abs_tts import AbsTTS
-import torch
-import torch.nn.functional as F
-
 import importlib
 
 def import_string(path): m, c = path.rsplit(".", 1); return getattr(importlib.import_module(m), c)
@@ -66,6 +63,8 @@ class F5TTS(AbsTTS):
         self.idim = idim
         self.odim = odim
         self.frac_lengths_mask = frac_lengths_mask
+        self.null_token_id = 0     # must be >= 0; use your <pad> or <unk> id
+        self.pad_id = -1           # only for length heuristics, not fed to the model
         
         # mel spec
         self.mel_spec = default(mel_spec_module, MelSpec(**mel_spec_kwargs))
