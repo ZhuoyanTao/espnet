@@ -1,0 +1,50 @@
+##########################################################
+#                   TTS MODEL SETTING
+##########################################################
+tts: f5tts_espnet
+tts_conf:
+  pretrained_ckpt: /work/nvme/bbjs/ttao3/espnet/egs2/libritts_r/tts2/downloads/F5-TTS/F5TTS_v1_Base/model_1250000.safetensors
+  model_cfg: F5TTS_v1_Base
+  use_ema: true
+  mel_spec_kwargs:
+    n_fft: 1024
+    hop_length: 240
+    win_length: 1024
+    n_mel_channels: 100
+    target_sample_rate: 24000
+    mel_spec_type: vocos
+
+##########################################################
+#                OPTIMIZER / SCHEDULER
+##########################################################
+optim: adamw
+optim_conf:
+  lr: 1.0e-4
+  betas: [0.9, 0.98]
+  eps: 1.0e-9
+  weight_decay: 0.0
+
+scheduler: warmuplr
+scheduler_conf:
+  warmup_steps: 10000
+
+grad_clip: 1.0
+
+##########################################################
+#                 DATALOADER / TRAIN LOOP
+##########################################################
+batch_type: numel
+batch_bins: 1600000
+accum_grad: 2
+max_epoch: 12
+patience: 4
+num_workers: 4
+sort_in_batch: descending
+sort_batch: descending
+log_interval: 50
+keep_nbest_models: 10
+seed: 777
+unused_parameters: true
+
+best_model_criterion:
+  - [valid, loss, min]
