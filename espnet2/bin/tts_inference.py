@@ -335,6 +335,7 @@ def inference(
     vocoder_config: Optional[str],
     vocoder_file: Optional[str],
     vocoder_tag: Optional[str],
+    inference_args: Optional[Dict[str, Any]] = None
 ):
     """Run text-to-speech inference."""
     if batch_size > 1:
@@ -381,11 +382,14 @@ def inference(
         **text2speech_kwargs,
     )
 
-    # 3. Build data-iterator
-    if not text2speech.use_speech:
+    inf_args = inference_args or {}
+    need_speech = text2speech.use_speech or bool(inf_args.get("use_ref_audio", False))
+    if not need_speech:
         data_path_and_name_and_type = list(
             filter(lambda x: x[1] != "speech", data_path_and_name_and_type)
         )
+
+    # 3. Build data-iterator
     loader = TTSTask.build_streaming_iterator(
         data_path_and_name_and_type,
         dtype=dtype,
@@ -439,7 +443,10 @@ def inference(
             batch = {k: v[0] for k, v in batch.items() if not k.endswith("_lengths")}
 
             start_time = time.perf_counter()
-            output_dict = text2speech(**batch)
+            if inf_args.get("use_ref_audio", False) and "speech" in batch and "ref_audio" not in batch:
+                batch["ref_audio"] = batch["speech"]
+
+            output_dict = text2speech(**batch, decode_conf=inf_args)
 
             key = keys[0]
             insize = next(iter(batch.values())).size(0) + 1
@@ -564,6 +571,14 @@ def get_parser():
     parser = config_argparse.ArgumentParser(
         description="TTS inference",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+    "--inference_args",
+    type=dict,
+    default=None,
+    help="Extra kwargs forwarded to model.inference(**kwargs). "
+         "Useful for model-specific options like F5: steps, cfg_strength, "
+         "duration, use_ref_audio, seed, etc. Can be given in YAML via --config.",
     )
 
     # Note(kamo): Use "_" instead of "-" as separator.
