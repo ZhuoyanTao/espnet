@@ -177,10 +177,19 @@ class F5TTSEspnet(AbsTTS):
         self.null_token_id = 0 if vocab_char_map is None else vocab_char_map.get("<pad>", 0)
         self._ref_db: Dict[Union[int, str], Union[str, torch.Tensor]] = {}
         self.fallback_ref_root: Optional[str] = None  # settable later via attribute or YAML hook
+        self.ref_roots: Dict[str, Optional[str]] = {"train": None, "dev": None, "test": None}
         # cache target sample rate robustly
         self.target_sr = int(getattr(self.mel_spec, "target_sample_rate",
                           mel_spec_kwargs.get("target_sample_rate", 24000)))
-    
+        
+    def set_ref_roots(self, *, train: Optional[str] = None,
+                            dev: Optional[str] = None,
+                            test: Optional[str] = None) -> None:
+        """Set directories that contain per-speaker subfolders for each split."""
+        if train is not None: self.ref_roots["train"] = train
+        if dev   is not None: self.ref_roots["dev"]   = dev
+        if test  is not None: self.ref_roots["test"]  = test
+        
     def _ref_to_cond(self, ref: Union[str, torch.Tensor]) -> torch.FloatTensor:
         """Turn a file path or tensor into (1, T, D) mel cond on the right device."""
         if isinstance(ref, str):
@@ -267,17 +276,22 @@ class F5TTSEspnet(AbsTTS):
     @torch.no_grad()
     def inference(
         self,
-        text: torch.LongTensor,   # (Ttxt,)
+        text: torch.LongTensor,
         sids: Optional[torch.LongTensor] = None,
         spembs: Optional[torch.FloatTensor] = None,
-        duration: Optional[int] = None,     # target frames to generate (mel frames)
+        duration: Optional[int] = None,
         use_ref_audio: bool = False,
-        ref_audio: Optional[torch.FloatTensor] = None,  # raw wav (T) or mel (D,T) / (T,D)
+        ref_audio: Optional[torch.FloatTensor] = None,
         steps: int = 32,
         cfg_strength: float = 1.0,
         vocoder: Optional[Callable[[torch.FloatTensor], torch.FloatTensor]] = None,
         seed: Optional[int] = None,
-        ref_key: Optional[Union[int, str]] = None, 
+        ref_key: Optional[Union[int, str]] = None,
+        # NEW:
+        ref_split: str = "train",
+        ref_glob: str = "*.wav",
+        utt_id: Optional[str] = None,
+        ref_log_path: Optional[str] = None,   # if set, append CSV lines
         **kwargs,
     ):
         self.eval()
@@ -289,12 +303,20 @@ class F5TTSEspnet(AbsTTS):
 
         B = 1
         cond = None  # <-- initialize
+        ref_info = "none"
+        B = 1
+        cond: Optional[torch.FloatTensor] = None
+        ref_info = "none"
+        ref_src: str = "none"  # human-friendly tag for where the ref came from
+        ref_path: Optional[str] = None
+        used_zero = False
 
         # ---- Try to build conditioning from reference(s)
         if use_ref_audio:
             if ref_audio is not None:
                 cond = self._ref_to_cond(ref_audio)
                 ref_info = "explicit ref_audio tensor"
+                ref_src  = "tensor"
             else:
                 key = ref_key
                 if key is None and sids is not None and sids.numel() > 0:
@@ -304,17 +326,61 @@ class F5TTSEspnet(AbsTTS):
                 if cond is None and key is not None and key in self._ref_db:
                     cond = self._ref_to_cond(self._ref_db[key])
                     ref_info = f"registered reference for key={key}"
+                    src = self._ref_db[key]
+                    cond = self._ref_to_cond(src)
+                    ref_info = f"registered reference for key={key}"
+                    ref_src  = "registered"
+                    ref_path = src if isinstance(src, str) else None
 
-                # 2) fallback: any wav for that speaker under fallback_ref_root/{spk}/*.wav
-                if cond is None and key is not None and self.fallback_ref_root:
-                    spk_dir = os.path.join(self.fallback_ref_root, str(key))
-                    if os.path.isdir(spk_dir):
-                        import random, glob
-                        cands = glob.glob(os.path.join(spk_dir, "*.wav"))
-                        if cands:
-                            chosen = random.choice(cands)
-                            cond = self._ref_to_cond(chosen)
-                            ref_info = f"fallback file {chosen} for key={key}"
+                # 2) split-aware fallback search (prefer ref_split, then others)
+                if cond is None and key is not None:
+                    tried_info = []
+
+                    def _try_split(split_name: str) -> Optional[torch.FloatTensor]:
+                        root = self.ref_roots.get(split_name) if hasattr(self, "ref_roots") else None
+                        if not root:
+                            tried_info.append(f"{split_name}:<no-root>")
+                            return None
+                        spk_dir = os.path.join(root, str(key))
+                        if os.path.isdir(spk_dir):
+                            import glob as _glob
+                            cands = sorted(_glob.glob(os.path.join(spk_dir, ref_glob)))
+                            if cands:
+                                # deterministic: pick first (unless user seeds and randomizes elsewhere)
+                                chosen = cands[0]
+                                tried_info.append(f"{split_name}:{chosen}")
+                                nonlocal ref_path, ref_src
+                                ref_path = chosen
+                                ref_src  = f"split:{split_name}"
+                                return self._ref_to_cond(chosen)
+                        tried_info.append(f"{split_name}:<none>")
+                        return None
+
+                    # try preferred split
+                    cond = _try_split(ref_split)
+
+                    # fall back to the other splits
+                    if cond is None:
+                        for other in ("train", "dev", "test"):
+                            if other == ref_split:
+                                continue
+                            cond = _try_split(other)
+                            if cond is not None:
+                                break
+
+                    # legacy single-root fallback
+                    if cond is None and self.fallback_ref_root:
+                        spk_dir = os.path.join(self.fallback_ref_root, str(key))
+                        if os.path.isdir(spk_dir):
+                            import random, glob as _glob
+                            cands = _glob.glob(os.path.join(spk_dir, ref_glob))
+                            if cands:
+                                chosen = random.choice(cands)
+                                cond = self._ref_to_cond(chosen)
+                                tried_info.append(f"legacy:{chosen}")
+
+                    if cond is not None:
+                        ref_info = " | ".join(tried_info)
 
         # ---- If still no cond, use zeros of requested duration
         if cond is None:
@@ -322,6 +388,8 @@ class F5TTSEspnet(AbsTTS):
             cond = torch.zeros((1, T, self.num_channels), device=self.device, dtype=torch.float32)
             no_ref = True
             ref_info = f"zeros (no reference found, duration={T})"
+            ref_src  = "zeros"
+            used_zero = True
         else:
             no_ref = False
 
@@ -339,11 +407,31 @@ class F5TTSEspnet(AbsTTS):
             vocoder=None,               # keep mel; let ESPnet run its own vocoder if desired
             use_epss=True,
             no_ref_audio=no_ref,
-            generator=g,
         )
 
         if out.dim() == 3:  # mel: (1, T, D)
             mel = out.squeeze(0)  # (T, D)
+            # ---- Append a one-line CSV record if requested
+            if ref_log_path is not None:
+                try:
+                    import csv
+                    os.makedirs(os.path.dirname(ref_log_path), exist_ok=True)
+                    with open(ref_log_path, "a", newline="") as f:
+                        w = csv.writer(f)
+                        # header suggestion:
+                        # utt_id, ref_key, ref_split, ref_src, ref_path, used_zero, duration
+                        w.writerow([
+                            str(utt_id or ""),
+                            "" if ref_key is None else str(ref_key),
+                            str(ref_split),
+                            ref_src,
+                            "" if ref_path is None else ref_path,
+                            int(used_zero),
+                            int(cond.shape[1]),
+                        ])
+                except Exception as _e:
+                    warnings.warn(f"Failed to append ref log: {ref_log_path!r}: {_e}")
+
             if vocoder is None:
                 return {"feat_gen": mel}
             wav = vocoder(mel.transpose(0, 1)[None, ...]).squeeze(0)  # (T,)
