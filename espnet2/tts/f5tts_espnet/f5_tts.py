@@ -128,15 +128,22 @@ class F5TTSEspnet(AbsTTS):
         ode_method: str = "euler",
         device: Optional[str] = None,
         freeze_backbone: bool = False,
+        dtype: Union[str, torch.dtype] = "float32",
+        force_text_num_embeds: Optional[int] = None,
     ):
         super().__init__()
         self.idim = idim
         self.odim = odim
+        text_num_embeds = int(force_text_num_embeds) if force_text_num_embeds else int(self.idim)
 
         # ---- device
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self._device = torch.device(device)
+       # Map dtype to torch dtype (accept str or torch.dtype)
+        torch_dtype = dtype if isinstance(dtype, torch.dtype) else getattr(torch, str(dtype), None)
+        if torch_dtype is None:
+            torch_dtype = torch.float32
 
         # ---- mel frontend (time-major mels: (B, T, D))
         self.mel_spec = MelSpec(**mel_spec_kwargs)
@@ -148,24 +155,54 @@ class F5TTSEspnet(AbsTTS):
             )
 
         # ---- load upstream model (CFM + DiT backbone) from checkpoint
-        cfg = _load_f5_config(model_cfg)
-        model_cls = _get_f5_model_cls(cfg)
-        ckpt_path = _resolve_ckpt(pretrained_ckpt)
+        # ---- load upstream model (CFM + DiT backbone) from checkpoint (manual path)
+        from hydra.utils import get_class
+        from f5_tts.model.cfm import CFM
+        from safetensors.torch import load_file as safe_load_file
 
-        mel_type = mel_spec_kwargs.get("mel_spec_type", "vocos")
-        ema_or_model = load_model(
-            model_cls,
-            cfg.model.arch,           # dict of backbone args
-            ckpt_path,
-            mel_spec_type=mel_type,
-            vocab_file="",            # we let ESPnet handle tokenization; upstream will accept ids
-            ode_method=ode_method,
-            use_ema=use_ema,
-            device=str(self._device),
+        # --- always build the network from cfg ---
+        cfg = _load_f5_config(model_cfg)
+
+        backbone  = cfg.model.backbone
+        model_cls = get_class(f"f5_tts.model.{backbone}")
+        arch_dict = dict(cfg.model.arch) if hasattr(cfg.model, "arch") else {}
+
+        transformer = model_cls(
+            **arch_dict,
+            text_num_embeds=text_num_embeds,
+            mel_dim=int(self.num_channels),
         )
-        # unwrap EMA wrapper if present
-        inner = getattr(ema_or_model, "model", ema_or_model)
-        self.inner: nn.Module = inner.to(self._device).float()
+        model = CFM(transformer=transformer).to(self._device)
+
+        # --- only load external weights if a checkpoint path is given ---
+        if pretrained_ckpt and str(pretrained_ckpt).strip():
+            ckpt_path = _resolve_ckpt(pretrained_ckpt)
+            if ckpt_path.endswith(".safetensors"):
+                from safetensors.torch import load_file as safe_load_file
+                state = safe_load_file(ckpt_path, device=str(self._device))
+            else:
+                ckpt = torch.load(ckpt_path, map_location=self._device)
+                state = ckpt.get("model_state_dict", ckpt.get("state_dict", ckpt))
+
+            def _strip_prefixes(sd):
+                def strip_one(k):
+                    for p in ("ema_model.", "model.", "module."):
+                        if k.startswith(p):
+                            return k[len(p):]
+                    return k
+                return {strip_one(k): v for k, v in sd.items() if isinstance(v, torch.Tensor)}
+
+            normalized = _strip_prefixes(state)
+
+            # (optional) drop size-mismatch keys, e.g., text embedding if vocab differs
+            model_sd = model.state_dict()
+            drop = [k for k,v in normalized.items() if k in model_sd and v.shape != model_sd[k].shape]
+            for k in drop: normalized.pop(k, None)
+
+            model.load_state_dict(normalized, strict=False)
+
+        self.inner = model
+
 
         if freeze_backbone:
             for p in self.inner.parameters():
@@ -324,9 +361,9 @@ class F5TTSEspnet(AbsTTS):
 
                 # 1) registered ref
                 if cond is None and key is not None and key in self._ref_db:
+                    src = self._ref_db[key]
                     cond = self._ref_to_cond(self._ref_db[key])
                     ref_info = f"registered reference for key={key}"
-                    src = self._ref_db[key]
                     cond = self._ref_to_cond(src)
                     ref_info = f"registered reference for key={key}"
                     ref_src  = "registered"
@@ -415,11 +452,17 @@ class F5TTSEspnet(AbsTTS):
             if ref_log_path is not None:
                 try:
                     import csv
-                    os.makedirs(os.path.dirname(ref_log_path), exist_ok=True)
+                    _dir = os.path.dirname(ref_log_path)
+                    if _dir:
+                        os.makedirs(_dir, exist_ok=True)
+                    # write header once if file doesn't exist or is empty
+                    need_header = (not os.path.exists(ref_log_path)) or (os.path.getsize(ref_log_path) == 0)
                     with open(ref_log_path, "a", newline="") as f:
                         w = csv.writer(f)
                         # header suggestion:
                         # utt_id, ref_key, ref_split, ref_src, ref_path, used_zero, duration
+                        if need_header:
+                           w.writerow(["utt_id","ref_key","ref_split","ref_src","ref_path","used_zero","duration"])
                         w.writerow([
                             str(utt_id or ""),
                             "" if ref_key is None else str(ref_key),

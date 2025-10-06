@@ -39,6 +39,8 @@ from espnet2.utils.get_default_kwargs import get_default_kwargs
 from espnet2.utils.griffin_lim import Spectrogram2Waveform
 from espnet2.utils.nested_dict_action import NestedDictAction
 from espnet2.utils.types import int_or_none, str2bool, str_or_none
+from espnet2.utils.vocos import VocosSpectrogram2Waveform
+
 
 feats_extractor_choices = ClassChoices(
     "feats_extract",
@@ -400,6 +402,11 @@ class TTSTask(AbsTask):
                 vocoder_file, vocoder_config_file
             )
             return vocoder.to(device)
+                # NEW: load a Vocos checkpoint/repo with the scheme "vocos:<path_or_repo>"
+        elif isinstance(vocoder_file, str) and vocoder_file.startswith("vocos:"):
+            target = vocoder_file.split(":", 1)[1].strip()
+            # If you ever need log-mel instead of vocos mel, pass assume_input="log_mel"
+            return VocosSpectrogram2Waveform(repo_or_path=target, device=device)
 
         else:
             raise ValueError(f"{vocoder_file} is not supported format.")
