@@ -20,7 +20,7 @@ from espnet2.torch_utils.device_funcs import force_gatherable
 from espnet2.universa.abs_universa import AbsUniversa
 from espnet2.universa.ar_universa.universa_beam_search import ARUniVERSABeamSearch
 from espnet2.universa.metric_tokenizer.metric_tokenizer import MetricTokenizer
-from espnet2.universa.quantizers.hificodec_quantizer import HiFiCodecQuantizer #Terry Addition
+from espnet2.universa.quantizer.hificodec_quantizer import HiFiCodecQuantizer #Terry Addition
 from espnet.nets.pytorch_backend.nets_utils import make_pad_mask, th_accuracy
 from espnet.nets.pytorch_backend.transformer.add_sos_eos import add_sos_eos
 from espnet.nets.pytorch_backend.transformer.attention import MultiHeadedAttention
@@ -609,6 +609,7 @@ class ARUniversa(AbsUniversa):
             skip_meta_label_score=skip_meta_label_score,
             beam_masking=beam_masking,
         )
+
 
     @typechecked
     def inference(
