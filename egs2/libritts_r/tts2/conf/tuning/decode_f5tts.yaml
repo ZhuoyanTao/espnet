@@ -1,0 +1,6 @@
+# These are passed straight to F5TTSEspnet.inference(**inference_args)
+steps: 32          # diffusion steps
+cfg_strength: 1.0  # classifier-free guidance
+duration: 800      # target mel frames (~800*hop/24k sec)
+use_ref_audio: true
+seed: 0   

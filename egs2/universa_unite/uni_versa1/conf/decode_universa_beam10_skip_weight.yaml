@@ -1,0 +1,3 @@
+batch_size: 1
+skip_meta_label_score: true
+beam_size: 10

@@ -155,6 +155,7 @@ class Text2Speech:
         sids: Union[torch.Tensor, np.ndarray, None] = None,
         lids: Union[torch.Tensor, np.ndarray, None] = None,
         decode_conf: Optional[Dict[str, Any]] = None,
+        **extra,
     ) -> Dict[str, torch.Tensor]:
         """Run text-to-speech."""
 
@@ -183,6 +184,8 @@ class Text2Speech:
         if lids is not None:
             batch.update(lids=lids)
         batch = to_device(batch, self.device)
+        if extra:
+            batch.update(extra)
 
         # overwrite the decode configs if provided
         cfg = self.decode_conf
@@ -231,18 +234,17 @@ class Text2Speech:
 
     @property
     def use_sids(self) -> bool:
-        """Return sid is needed or not in the inference."""
-        return self.tts.spks is not None
+        # Some models (e.g., F5TTSEspnet) don't define .spks
+        return getattr(self.tts, "spks", None) is not None
 
     @property
     def use_lids(self) -> bool:
-        """Return sid is needed or not in the inference."""
-        return self.tts.langs is not None
+        return getattr(self.tts, "langs", None) is not None
 
     @property
     def use_spembs(self) -> bool:
-        """Return spemb is needed or not in the inference."""
-        return self.tts.spk_embed_dim is not None
+        return getattr(self.tts, "spk_embed_dim", None) is not None
+
 
     @staticmethod
     def from_pretrained(
@@ -335,6 +337,7 @@ def inference(
     vocoder_config: Optional[str],
     vocoder_file: Optional[str],
     vocoder_tag: Optional[str],
+    inference_args: Optional[Dict[str, Any]] = None
 ):
     """Run text-to-speech inference."""
     if batch_size > 1:
@@ -381,11 +384,24 @@ def inference(
         **text2speech_kwargs,
     )
 
-    # 3. Build data-iterator
-    if not text2speech.use_speech:
+    inf_args = inference_args or {}
+    if "seed" in inf_args:
+        _s = int(inf_args.pop("seed"))
+        # set global seeds; your script already does set_all_random_seed(args.seed)
+        # but this lets you control it per-run via inference_args.seed
+        import random
+        random.seed(_s)
+        np.random.seed(_s)
+        torch.manual_seed(_s)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(_s)
+    need_speech = text2speech.use_speech or bool(inf_args.get("use_ref_audio", False))
+    if not need_speech:
         data_path_and_name_and_type = list(
             filter(lambda x: x[1] != "speech", data_path_and_name_and_type)
         )
+
+    # 3. Build data-iterator
     loader = TTSTask.build_streaming_iterator(
         data_path_and_name_and_type,
         dtype=dtype,
@@ -437,9 +453,22 @@ def inference(
             # Change to single sequence and remove *_length
             # because inference() requires 1-seq, not mini-batch.
             batch = {k: v[0] for k, v in batch.items() if not k.endswith("_lengths")}
+            key = keys[0]  # e.g., "id10001-xxxx"
+            batch["utt_id"] = key
 
             start_time = time.perf_counter()
-            output_dict = text2speech(**batch)
+            if inf_args.get("use_ref_audio", False) and "speech" in batch and "ref_audio" not in batch:
+                batch["ref_audio"] = batch["speech"]
+
+            t = batch["text"]
+            kind = "str" if isinstance(t, str) else (f"tensor{tuple(t.shape)}" if torch.is_tensor(t) else type(t).__name__)
+            print(f"[DEBUG] text kind={kind}")
+            if torch.is_tensor(t):
+                print(f"[DEBUG] text min/max id = {int(t.min())}/{int(t.max())}, len={t.numel()}")
+            else:
+                print(f"[DEBUG] raw text: {t[:120]}...")
+
+            output_dict = text2speech(**batch, decode_conf=inf_args)
 
             key = keys[0]
             insize = next(iter(batch.values())).size(0) + 1
@@ -564,6 +593,14 @@ def get_parser():
     parser = config_argparse.ArgumentParser(
         description="TTS inference",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+    "--inference_args",
+    type=dict,
+    default=None,
+    help="Extra kwargs forwarded to model.inference(**kwargs). "
+         "Useful for model-specific options like F5: steps, cfg_strength, "
+         "duration, use_ref_audio, seed, etc. Can be given in YAML via --config.",
     )
 
     # Note(kamo): Use "_" instead of "-" as separator.

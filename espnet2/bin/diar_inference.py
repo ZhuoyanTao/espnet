@@ -123,14 +123,21 @@ class DiarizeSpeech:
     @typechecked
     def __call__(
         self, speech: Union[torch.Tensor, np.ndarray], fs: int = 8000
-    ) -> Union[List[torch.Tensor], Tuple]:
+    ) -> Union[np.ndarray, Tuple[List[np.ndarray], np.ndarray]]:
         """Inference
 
         Args:
             speech: Input speech data (Batch, Nsamples [, Channels])
             fs: sample rate
         Returns:
-            [speaker_info1, speaker_info2, ...]
+            np.ndarray:
+                If `enh_s2t_task` is False: (B, T, S) diarization logits passed through sigmoid.
+            Tuple[List[np.ndarray], np.ndarray]:
+                If `enh_s2t_task` is True:
+                (
+                    waves,  # list of length S; each item shape (B, Nsamples)
+                    spk_prediction  # (B, T, S) after sigmoid
+                )
 
         """
 
@@ -306,19 +313,37 @@ class DiarizeSpeech:
             else:
                 waves = None
 
+        # if self.num_spk is not None:
+        #     assert spk_prediction.size(2) == self.num_spk, (
+        #         spk_prediction.size(2),
+        #         self.num_spk,
+        #     )
+        # assert spk_prediction.size(0) == batch_size, (
+        #     spk_prediction.size(0),
+        #     batch_size,
+        # )
+        # spk_prediction = spk_prediction.cpu().numpy()
+        # spk_prediction = 1 / (1 + np.exp(-spk_prediction))
+        
+        # --- Align speaker axis to self.num_spk if requested ---
         if self.num_spk is not None:
-            assert spk_prediction.size(2) == self.num_spk, (
-                spk_prediction.size(2),
-                self.num_spk,
-            )
-        assert spk_prediction.size(0) == batch_size, (
-            spk_prediction.size(0),
-            batch_size,
-        )
+            S = spk_prediction.size(2)
+            if S < self.num_spk:
+                pad = spk_prediction.new_zeros(spk_prediction.size(0),
+                                               spk_prediction.size(1),
+                                               self.num_spk - S)
+                spk_prediction = torch.cat([spk_prediction, pad], dim=2)
+            elif S > self.num_spk:
+                spk_prediction = spk_prediction[:, :, : self.num_spk]
+
         spk_prediction = spk_prediction.cpu().numpy()
         spk_prediction = 1 / (1 + np.exp(-spk_prediction))
 
-        return waves, spk_prediction if self.enh_s2t_task else spk_prediction
+        # return waves, spk_prediction if self.enh_s2t_task else spk_prediction
+        if self.enh_s2t_task:
+            return waves, spk_prediction
+        else:
+            return spk_prediction
 
     @torch.no_grad()
     def cal_permumation(self, ref_wavs, enh_wavs, criterion="si_snr"):
@@ -562,6 +587,23 @@ def inference(
                     )
                 )
 
+    # --- helper: make S match --num_spk by pad/truncate ---
+    import numpy as _np
+    def _align_num_spk(arr: _np.ndarray, target_S: int) -> _np.ndarray:
+        """Return arr with last dim padded/truncated to target_S (expects (..., S))."""
+        if arr.ndim < 1:
+            return arr
+        S = arr.shape[-1]
+        if S == target_S:
+            return arr
+        if S > target_S:
+            return arr[..., :target_S]
+        pad_shape = list(arr.shape)
+        pad_shape[-1] = target_S - S
+        pad = _np.zeros(pad_shape, dtype=arr.dtype)
+        return _np.concatenate([arr, pad], axis=-1)
+
+
     for keys, batch in loader:
         assert isinstance(batch, dict), type(batch)
         assert all(isinstance(s, str) for s in keys), keys
@@ -571,12 +613,46 @@ def inference(
 
         if enh_s2t_task:
             waves, spk_predictions = diarize_speech(**batch)
+                        # --- DEBUG TAP (enh branch) ---
+            import os, sys, numpy as np
+            os.makedirs(f"{output_dir}/_debug_raw", exist_ok=True)
+            for b in range(len(keys)):
+                arr = spk_predictions[b] if spk_predictions is not None else None
+                if arr is None:
+                    print(f"DEBUG: spk_predictions is None for key={keys[b]}",
+                        file=sys.stderr, flush=True)
+                    continue
+                print(
+                    f"DEBUG {keys[b]}: type={type(arr)} shape={getattr(arr, 'shape', None)} "
+                    f"min={np.nanmin(arr):.4f} max={np.nanmax(arr):.4f} "
+                    f"any_nan={np.isnan(arr).any()} any_inf={np.isinf(arr).any()}",
+                    file=sys.stderr, flush=True,
+                )
+                np.save(os.path.join(output_dir, "_debug_raw", f"{keys[b]}.npy"), arr)
+            # --- END DEBUG TAP ---
             for b in range(batch_size):
                 writer[keys[b]] = spk_predictions[b]
                 for spk, w in enumerate(waves):
                     wav_writers[spk][keys[b]] = fs, w[b]
         else:
             spk_predictions = diarize_speech(**batch)
+        # --- DEBUG TAP: inspect and save raw model outputs ---
+        import os, sys, numpy as np
+        os.makedirs(f"{output_dir}/_debug_raw", exist_ok=True)
+
+        for b in range(len(keys)):
+            arr = spk_predictions[b] if spk_predictions is not None else None
+            if arr is None:
+                print(f"DEBUG: spk_predictions is None for key={keys[b]}", file=sys.stderr, flush=True)
+                continue
+            print(
+                f"DEBUG {keys[b]}: type={type(arr)} shape={getattr(arr,'shape',None)} "
+                f"min={np.nanmin(arr):.4f} max={np.nanmax(arr):.4f} "
+                f"any_nan={np.isnan(arr).any()} any_inf={np.isinf(arr).any()}",
+                file=sys.stderr, flush=True,
+            )
+            np.save(f"{output_dir}/_debug_raw/{keys[b]}.npy", arr)
+        # --- END DEBUG TAP ---
             for b in range(batch_size):
                 writer[keys[b]] = spk_predictions[b]
 

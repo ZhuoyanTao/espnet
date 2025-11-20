@@ -177,10 +177,21 @@ class ESPnetDiarizationModel(AbsESPnetModel):
         else:
             sad_mr, sad_fr, mi, fa, cf, acc, der = 0, 0, 0, 0, 0, 0, 0
 
+        # stats = dict(
+        #     loss=loss.detach(),
+        #     loss_att=loss_att.detach() if loss_att is not None else None,
+        #     loss_pit=loss_pit.detach() if loss_pit is not None else None,
+        #     sad_mr=sad_mr,
+        #     sad_fr=sad_fr,
+        #     mi=mi,
+        #     fa=fa,
+        #     cf=cf,
+        #     acc=acc,
+        #     der=der,
+        # )
+        
         stats = dict(
             loss=loss.detach(),
-            loss_att=loss_att.detach() if loss_att is not None else None,
-            loss_pit=loss_pit.detach() if loss_pit is not None else None,
             sad_mr=sad_mr,
             sad_fr=sad_fr,
             mi=mi,
@@ -189,6 +200,13 @@ class ESPnetDiarizationModel(AbsESPnetModel):
             acc=acc,
             der=der,
         )
+
+        # Only log these when they actually exist (EEND-EDA with attractor)
+        if loss_att is not None and torch.isfinite(loss_att):
+            stats["loss_att"] = loss_att.detach()
+        if loss_pit is not None and torch.isfinite(loss_pit):
+            stats["loss_pit"] = loss_pit.detach()
+
 
         loss, stats, weight = force_gatherable((loss, stats, batch_size), loss.device)
         return loss, stats, weight

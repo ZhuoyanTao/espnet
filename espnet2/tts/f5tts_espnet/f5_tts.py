@@ -342,6 +342,9 @@ class F5TTSEspnet(AbsTTS):
         wavscp_path = os.path.join(root, "wav.scp")
         u2s_path    = os.path.join(root, "utt2spk")
         if not (os.path.isfile(wavscp_path) and os.path.isfile(u2s_path)):
+            print(f"[F5TTS] Kaldi split={split}: wav.scp/utt2spk missing "
+                  f"(wav.scp exists={os.path.isfile(wavscp_path)}, utt2spk exists={os.path.isfile(u2s_path)}). "
+                  f"root={root}", flush=True)
             return
         wavscp = {}
         with open(wavscp_path, "r", encoding="utf-8") as f:
@@ -359,6 +362,9 @@ class F5TTSEspnet(AbsTTS):
                 u2s[utt] = spk
         self._kaldi_wavscp[split] = wavscp
         self._kaldi_u2s[split] = u2s
+        print(f"[F5TTS] Kaldi load split={split}: utts={len(u2s)}, wavscp={len(wavscp)}, "
+      f"speakers={len(set(u2s.values()))}", flush=True)
+
 
     def _kaldi_pick_utt_for_spk(self, split: str, key_int: int, choose: str = "first") -> Optional[str]:
         """Return a utt id in this split whose speaker matches key_int (supports idXXXX and plain XXXX)."""
@@ -370,6 +376,8 @@ class F5TTSEspnet(AbsTTS):
         cands = [u for u, spk in u2s.items() if spk == target_a or spk == target_b]
         if not cands: return None
         cands.sort()
+        print(f"[F5TTS] pick_utt split={split} for key={key_int} (accept id{key_int} or {key_int})", flush=True)
+        print(f"[F5TTS] candidates={len(cands)}; first={cands[:5]}", flush=True)
         if choose == "random":
             import random
             return random.choice(cands)
@@ -470,6 +478,7 @@ class F5TTSEspnet(AbsTTS):
         #  - stats values must be torch.Tensors (not Python floats)
         #  - weight must be a 1-D vector of per-item weights (shape: [B,])
         # Upstream returns (loss, gt_mel, pred_mel)
+        print('text is', text)
         loss, gt, pred = self.inner.forward(inp=feats, text=text, lens=lens)
 
         # Batch size
@@ -494,8 +503,8 @@ class F5TTSEspnet(AbsTTS):
         duration: Optional[int] = None,
         use_ref_audio: bool = False,
         ref_audio: Optional[torch.FloatTensor] = None,
-        steps: int = 32,
-        cfg_strength: float = 1.0,
+        steps: int = 64,
+        cfg_strength: float = 0.5,
         vocoder: Optional[Callable[[torch.FloatTensor], torch.FloatTensor]] = None,
         seed: Optional[int] = None,
         ref_key: Optional[Union[int, str]] = None,
@@ -529,16 +538,56 @@ class F5TTSEspnet(AbsTTS):
 
         # --- infer speaker key from utt_id like "id10270-xxx"
         def _infer_key_from_utt(uid: Optional[str]) -> Optional[int]:
+            """
+            Try to extract a numeric speaker id from an utterance id.
+
+            Accepts forms like:
+            - 'id10270-xxxx', 'id10270_xxx', 'id10270'
+            - '10270-xxxx', '10270_xxx', '10270'
+            - 'spk10270-xxxx' (fallback: any first integer run)
+            Returns the integer (e.g., 10270) or None if nothing sensible is found.
+            """
             if not uid:
                 return None
+
             import re
-            m = re.match(r"^id(\d+)\b", uid) or re.match(r"^(\d+)\b", uid)
+
+            s = str(uid)
+
+            # 1) strict: starts with 'id' + digits
+            m = re.match(r'^id(\d+)\b', s)
             if m:
                 try:
                     return int(m.group(1))
                 except Exception:
                     return None
+
+            # 2) strict: starts with digits
+            m = re.match(r'^(\d+)\b', s)
+            if m:
+                try:
+                    return int(m.group(1))
+                except Exception:
+                    return None
+
+            # 3) relaxed: look for '-idNNNN' or '_idNNNN'
+            m = re.search(r'[\-_]id(\d+)\b', s)
+            if m:
+                try:
+                    return int(m.group(1))
+                except Exception:
+                    return None
+
+            # 4) relaxed: first standalone integer chunk anywhere (e.g., 'spk10270-utt001')
+            m = re.search(r'(\d{3,})', s)  # require at least 3 digits to avoid tiny numbers
+            if m:
+                try:
+                    return int(m.group(1))
+                except Exception:
+                    return None
+
             return None
+
 
         # ---- Try to build conditioning from reference(s)
         if use_ref_audio:
@@ -548,6 +597,8 @@ class F5TTSEspnet(AbsTTS):
                 key = int(sids.view(-1)[0].item())
             if key is None:
                 key = _infer_key_from_utt(utt_id)
+                print(f"[F5TTS] use_ref_audio={use_ref_audio}, prefer_split_ref={prefer_split_ref}, "
+                  f"ref_split={ref_split}, ref_choose={ref_choose}, uid={utt_id}, key={key}", flush=True)
 
             # source priority: tensor first unless prefer_split_ref=True
             try_tensor_first = (not prefer_split_ref)
@@ -623,6 +674,7 @@ class F5TTSEspnet(AbsTTS):
                 if cond is not None and tried_info:
                     ref_info = " | ".join(tried_info)
                 # ---------- (C2) Kaldi-style split (wav.scp + utt2spk) ----------
+                print("[F5TTS] no file-based ref found; trying Kaldi tables", flush=True)
                 if cond is None and key is not None:
                     # first: try the requested split
                     utt = self._kaldi_pick_utt_for_spk(ref_split, key, choose=ref_choose)
@@ -637,6 +689,8 @@ class F5TTSEspnet(AbsTTS):
                                 break
                     if utt is not None:
                         wav_entry = self._kaldi_wavscp[ref_split][utt]
+                        print(f"[F5TTS] Kaldi hit: split={ref_split}, utt={utt}", flush=True)
+                        print(f"[F5TTS] wav.scp entry: {wav_entry[:200]}{'...' if len(wav_entry)>200 else ''}", flush=True)
                         try:
                             x = self._load_wav_from_kaldi_entry(wav_entry)
                             mel = self.mel_spec(x[None, ...])            # (1, D, T)
@@ -663,17 +717,13 @@ class F5TTSEspnet(AbsTTS):
         print(f"[F5TTS inference] Using reference: {ref_info}")
         
         text = text.to(self.device, dtype=torch.long)[None, :]  # (1, Ttxt)
-
+        target_dur = int(duration) if (duration is not None) else int(cond.shape[1])
         # Upstream sample() returns mel (B,T,D) unless a vocoder is provided
         out, _ = self.inner.sample(
-            cond=cond,
-            text=text,
-            duration=cond.shape[1],
-            steps=int(steps),
-            cfg_strength=float(cfg_strength),
-            vocoder=None,               # keep mel; let ESPnet run its own vocoder if desired
-            use_epss=True,
-            no_ref_audio=no_ref,
+            cond=cond, text=text, duration=target_dur,
+            steps=int(steps), cfg_strength=float(cfg_strength),
+            vocoder=None, use_epss=True, no_ref_audio=no_ref,
+            seed=int(seed) if (seed is not None) else None,
         )
 
         if out.dim() == 3:  # mel: (1, T, D)

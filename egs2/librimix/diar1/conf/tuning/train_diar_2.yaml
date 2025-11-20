@@ -19,18 +19,20 @@ decoder: linear
 
 # minibatch related
 batch_type: folded
-batch_size: 64
+batch_size: 128
+valid_batch_type: folded
+valid_batch_size: 128
 
 # optimization related
 optim: adam
-accum_grad: 2
+accum_grad: 8
 grad_clip: 5
-max_epoch: 100
+max_epoch: 400
 optim_conf:
     lr: 0.0002
 scheduler: warmuplr
 scheduler_conf:
-    warmup_steps: 100000
+    warmup_steps: 2000
 
 # others:
 best_model_criterion:
@@ -56,3 +58,23 @@ specaug_conf:
     - 0
     - 40
     num_time_mask: 2
+
+# ----- iterator settings -----
+iterator_type: chunk
+valid_iterator_type: chunk     # was sequence (full-length)
+
+# Use "seconds" by passing a string; iterator converts using chunk_default_fs
+chunk_default_fs: 8000
+chunk_length: 32000          # 8 s @ 8k
+chunk_max_abs_length: 48000  # 12 s cap @ 8k
+chunk_shift_ratio: 0.5         # 50% overlap (better sample efficiency)
+chunk_discard_short_samples: false
+num_cache_chunks: 8
+
+label_aggregator: label_aggregator
+label_aggregator_conf:
+  win_length: 512
+  hop_length: 128
+  center: true
+  num_spk: 3          # <-- make this an actual integer
+  reduce_mode: topk

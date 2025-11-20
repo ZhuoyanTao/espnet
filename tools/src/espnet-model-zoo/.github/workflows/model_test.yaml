@@ -1,0 +1,54 @@
+name: Model test
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      max-parallel: 20
+      matrix:
+        # os: [ubuntu-16.04, ubuntu-18.04]
+        os: [ubuntu-18.04]
+        python-version: [3.8]
+        # espnet-version: ["espnet", "git+https://github.com/espnet/espnet.git"]
+        espnet-version: ["git+https://github.com/espnet/espnet.git"]
+    steps:
+      - uses: actions/checkout@master
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ matrix.espnet-version }}-${{ hashFiles('**/setup.py') }}
+      - uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: 'x64'
+      - name: install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y cmake g++-7 libsndfile1-dev bc
+      - name: install espnet
+        env:
+          ESPNET_VERSION: ${{ matrix.espnet-version }}
+        run: |
+          pip install -U pip setuptools wheel
+          pip install "${ESPNET_VERSION}"
+          pip install torch
+          pip install ".[test]"
+      - name: install pyopenjtalk
+        run: |
+          mkdir pyopenjtalk
+          cd pyopenjtalk
+          wget https://raw.githubusercontent.com/espnet/espnet/master/tools/installers/install_pyopenjtalk.sh
+          chmod +x install_pyopenjtalk.sh
+          ./install_pyopenjtalk.sh
+      - name: test model
+        run: |
+          export LD_LIBRARY_PATH=$(pwd)/pyopenjtalk/lib:${LD_LIBRARY_PATH}
+          pytest ./ci/test_model.py

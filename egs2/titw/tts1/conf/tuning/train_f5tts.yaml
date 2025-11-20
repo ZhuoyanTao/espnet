@@ -1,0 +1,28 @@
+tts: f5tts_espnet
+tts_conf:
+  pretrained_ckpt: /work/nvme/bbjs/ttao3/espnet/egs2/libritts_r/tts2/downloads/F5-TTS/F5TTS_v1_Base/model_1250000.safetensors
+  model_cfg: F5TTS_v1_Base
+  use_ema: true
+  mel_spec_kwargs:
+    n_fft: 1024
+    hop_length: 256
+    win_length: 1024
+    n_mel_channels: 100
+    target_sample_rate: 24000
+    mel_spec_type: vocos
+
+token_type: phn
+cleaner: tacotron
+g2p: g2p_en_no_space
+token_list: __TOK__
+
+normalize: none
+feats_extract: fbank
+feats_extract_conf:
+  fs: 24000
+  n_mels: 100
+  n_fft: 1024
+  hop_length: 256
+  win_length: 1024
+  fmin: 0
+  fmax: null

@@ -1,0 +1,16 @@
+inference_args:
+  steps: 80
+  cfg_strength: 1
+  duration: 800
+  use_ref_audio: true
+  prefer_split_ref: true   # ignore the explicit speech tensor
+  ref_split: train
+  ref_choose: first        # or "random"
+  seed: 0
+
+# vocoder: vocos
+# vocoder_conf:
+#   pretrained_name: charactr/vocos-mel-24khz   # HF ID
+#   # (Optional) enforce 24k + 100mel; only if your ESPnet version supports these fields:
+#   sample_rate: 24000
+#   n_mels: 100

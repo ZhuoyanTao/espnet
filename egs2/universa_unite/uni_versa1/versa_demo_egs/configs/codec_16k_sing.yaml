@@ -1,0 +1,5 @@
+# pseudo subjective metrics
+# -- utmos: UT-MOS score
+# -- singmos: Sing MOS score
+- name: pseudo_mos
+  predictor_types: ["utmos", "singmos"]

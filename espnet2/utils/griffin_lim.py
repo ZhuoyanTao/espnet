@@ -43,7 +43,7 @@ def logmel2linear(
     """
     assert lmspc.shape[1] == n_mels
     fmin = 0 if fmin is None else fmin
-    fmax = fs / 2 if fmax is None else fmax
+    fmax = (fs // 2) if fmax is None else int(fmax)
     mspc = np.power(10.0, lmspc)
     mel_basis = librosa.filters.mel(
         sr=fs, n_fft=n_fft, n_mels=n_mels, fmin=fmin, fmax=fmax

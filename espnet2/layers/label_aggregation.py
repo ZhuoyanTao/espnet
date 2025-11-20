@@ -13,19 +13,55 @@ class LabelAggregate(torch.nn.Module):
         win_length: int = 512,
         hop_length: int = 128,
         center: bool = True,
+        num_spk: Optional[int] = None,     # NEW
+        reduce_mode: str = "topk",         # NEW: "topk" or "first"
+        **kwargs,                          # NEW: ignore unknown YAML keys
     ):
         super().__init__()
 
         self.win_length = win_length
         self.hop_length = hop_length
         self.center = center
+        self.num_spk = num_spk
+        assert reduce_mode in ("topk", "first")
+        self.reduce_mode = reduce_mode
 
     def extra_repr(self):
         return (
             f"win_length={self.win_length}, "
             f"hop_length={self.hop_length}, "
             f"center={self.center}, "
+            f"num_spk={self.num_spk}, "
+            f"reduce_mode={self.reduce_mode}"
         )
+
+    def _clamp_num_spk(self, out: torch.Tensor) -> torch.Tensor:
+        """Ensure out has last-dim == num_spk by padding or reducing.
+
+        out: [B, T, S_found]
+        returns: [B, T, num_spk] if self.num_spk is set, else unchanged
+        """
+        if self.num_spk is None:
+            return out
+        B, T, S = out.shape
+        if S == self.num_spk:
+            return out
+        if S < self.num_spk:
+            pad = out.new_zeros(B, T, self.num_spk - S)
+            return torch.cat([out, pad], dim=2)
+
+        # S > num_spk: keep either the most-active speakers or first K
+        if self.reduce_mode == "first":
+            return out[:, :, : self.num_spk]
+
+        # "topk": choose speakers with largest total activity over time per item
+        # activity: [B, S]
+        activity = out.sum(dim=1)
+        # indices: [B, num_spk]
+        topk_idx = torch.topk(activity, k=self.num_spk, dim=1).indices
+        # gather needs [B, T, num_spk]
+        gather_idx = topk_idx.unsqueeze(1).expand(B, T, self.num_spk)
+        return torch.gather(out, dim=2, index=gather_idx)
 
     def forward(
         self, input: torch.Tensor, ilens: torch.Tensor = None
@@ -73,6 +109,8 @@ class LabelAggregate(torch.nn.Module):
         output = torch.gt(output.sum(dim=2, keepdim=False), self.win_length // 2)
         output = output.float()
 
+        output = self._clamp_num_spk(output)
+        
         # Step4: process lengths
         if ilens is not None:
             if self.center:

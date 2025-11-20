@@ -27,7 +27,8 @@ def recursive_sum(obj, weight: torch.Tensor, distributed: bool = False):
                 # reduced samples.
                 # This is important so that the condition-specific loss values reported
                 # in Reporter will be consistent with the general loss value.
-                obj = torch.nanmean(torch.stack(lst)) * len(lst)
+                # obj = torch.nanmean(torch.stack(lst)) * len(lst)
+                obj = torch.nanmean(torch.stack(lst).float()) * len(lst)
         return obj
     elif obj is None:
         return None

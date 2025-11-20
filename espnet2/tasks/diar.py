@@ -179,7 +179,12 @@ class DiarizationTask(AbsTask):
         Tuple[List[str], Dict[str, torch.Tensor]],
     ]:
         # NOTE(kamo): int value = 0 is reserved by CTC-blank symbol
-        return CommonCollateFn(float_pad_value=0.0, int_pad_value=-1)
+        return CommonCollateFn(
+            float_pad_value=0.0,
+            int_pad_value=-1,
+            fixed_label_width=args.num_spk,     # <— important
+            label_keys=("spk_labels",),         # only touch spk_labels
+        )
 
     @classmethod
     @typechecked

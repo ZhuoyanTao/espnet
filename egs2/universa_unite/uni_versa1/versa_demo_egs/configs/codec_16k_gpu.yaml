@@ -1,0 +1,27 @@
+# discrete speech metrics
+# -- speech_bert: speech bert score
+# -- speech_bleu: speech bleu score
+# -- speech_token_distance: speech token distance score
+- name: discrete_speech
+
+# pseudo subjective metrics
+# -- utmos: UT-MOS score
+# -- dnsmos: DNS-MOS score
+# -- plcmos: PLC-MOS score
+- name: pseudo_mos
+  predictor_types: ["utmos", "dnsmos", "plcmos"]
+  predictor_args:
+    utmos:
+      fs: 16000
+    dnsmos:
+      fs: 16000
+    plcmos:
+      fs: 16000
+
+# torchaudio-squim
+# -- torch_squim_pesq: reference-less pesq
+# -- torch_squim_stoi: reference-less stoi
+# -- torch_squim_si_sdr: reference-less si-sdr
+# -- torch_squim_mos: MOS score with reference
+- name: squim_no_ref 
+- name: squim_ref

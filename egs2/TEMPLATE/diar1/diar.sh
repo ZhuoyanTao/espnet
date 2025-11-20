@@ -54,6 +54,10 @@ diar_tag=    # Suffix to the result dir for diar model training.
 diar_config= # Config for diar model training.
 diar_args=   # Arguments for diar model training, e.g., "--max_epoch 10".
              # Note that it will overwrite args in diar config.
+# Dataset / naming
+dataset_tag=""      # Optional: force a short name for this dataset (e.g., "displace_dev")
+stats_tag=""        # Optional: extra suffix for stats dir, if you want even finer control
+
 feats_normalize=global_mvn # Normalizaton layer type.
 num_spk=2    # Number of speakers in the input audio
 
@@ -181,10 +185,19 @@ if [ -z "${inference_tag}" ]; then
     fi
 fi
 
-# The directory used for collect-stats mode
-diar_stats_dir="${expdir}/diar_stats_${fs}"
-# The directory used for training commands
-diar_exp="${expdir}/diar_${diar_tag}"
+# Build a dataset-aware tag automatically, unless user provides one
+if [ -z "${dataset_tag}" ]; then
+    _train_base="$(basename "${train_set}")"
+    _valid_base="$(basename "${valid_set}")"
+    # fold test_sets into the tag in a compact way (optional but nice):
+    _tests_compact="$(echo ${test_sets} | tr ' ' '_' | sed -e 's|/|_|g')"
+    dataset_tag="${_train_base}__${_valid_base}${_tests_compact:+__${_tests_compact}}"
+fi
+# Sanitize to be filesystem-safe
+dataset_tag="$(echo "${dataset_tag}" | sed -e 's|/|_|g' -e 's|[^A-Za-z0-9._-]|_|g')"
+
+diar_stats_dir="${expdir}/diar_stats_${fs}_${dataset_tag}${stats_tag:+_${stats_tag}}"
+diar_exp="${expdir}/diar_${diar_tag}_${dataset_tag}"
 
 # ========================== Main stages start from here. ==========================
 
@@ -547,7 +560,7 @@ if ! "${skip_eval}"; then
 
             scripts/utils/score_der.sh \
                 --collar ${collar} --fs ${fs} --frame_shift ${frame_shift} \
-                ${_dir} ${_inf_dir}/diarize.scp ${_data}/rttm \
+                ${_dir} ${_inf_dir}/diarize.scp ${_data}/rttm
         done
 
         # Show results in Markdown syntax

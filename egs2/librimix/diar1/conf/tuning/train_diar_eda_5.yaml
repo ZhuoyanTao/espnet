@@ -25,7 +25,7 @@ attractor_conf:
 # optimization related
 optim: adam
 grad_clip: 5
-max_epoch: 250
+max_epoch: 500
 optim_conf:
     lr: 0.002
 scheduler: warmuplr

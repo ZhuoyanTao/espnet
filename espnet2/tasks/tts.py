@@ -33,12 +33,15 @@ from espnet2.tts.feats_extract.log_mel_fbank import LogMelFbank
 from espnet2.tts.feats_extract.log_spectrogram import LogSpectrogram
 from espnet2.tts.prodiff import ProDiff
 from espnet2.tts.tacotron2 import Tacotron2
+from espnet2.tts.f5tts_espnet import F5TTS
 from espnet2.tts.transformer import Transformer
 from espnet2.tts.utils import ParallelWaveGANPretrainedVocoder
 from espnet2.utils.get_default_kwargs import get_default_kwargs
 from espnet2.utils.griffin_lim import Spectrogram2Waveform
 from espnet2.utils.nested_dict_action import NestedDictAction
 from espnet2.utils.types import int_or_none, str2bool, str_or_none
+from espnet2.utils.vocos import VocosSpectrogram2Waveform
+
 
 feats_extractor_choices = ClassChoices(
     "feats_extract",
@@ -97,6 +100,7 @@ tts_choices = ClassChoices(
         vits=VITS,
         joint_text2wav=JointText2Wav,
         jets=JETS,
+        f5tts_espnet=F5TTS,
     ),
     type_check=AbsTTS,
     default="tacotron2",
@@ -400,6 +404,11 @@ class TTSTask(AbsTask):
                 vocoder_file, vocoder_config_file
             )
             return vocoder.to(device)
+                # NEW: load a Vocos checkpoint/repo with the scheme "vocos:<path_or_repo>"
+        elif isinstance(vocoder_file, str) and vocoder_file.startswith("vocos:"):
+            target = vocoder_file.split(":", 1)[1].strip()
+            # If you ever need log-mel instead of vocos mel, pass assume_input="log_mel"
+            return VocosSpectrogram2Waveform(repo_or_path=target, device=device)
 
         else:
             raise ValueError(f"{vocoder_file} is not supported format.")

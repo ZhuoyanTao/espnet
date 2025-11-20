@@ -162,6 +162,7 @@ RUSLAN=downloads
 SIWIS=downloads
 GIGASPEECH=
 GIGAST=
+GLOBE=/work/nvme/bbjs/ttao3/espnet/egs2/globe/tts1/downloads
 GOOGLEI18N=downloads
 NOISY_SPEECH=
 NOISY_REVERBERANT_SPEECH=

@@ -43,6 +43,11 @@ def to_reported_value(v: Num, weight: Optional[Num] = None) -> "ReportedValue":
 
 @typechecked
 def aggregate(values: Sequence["ReportedValue"]) -> Num:
+    # if len(values) == 0:
+    #     print("[DEBUG aggregate] called with empty values list")
+    # else:
+    #     # Print only the first element to avoid spam
+    #     print(f"[DEBUG aggregate] called with {len(values)} values; type={type(values[0])}")
 
     for v in values:
         if not isinstance(v, type(values[0])):
@@ -62,7 +67,9 @@ def aggregate(values: Sequence["ReportedValue"]) -> Num:
         # Excludes non finite values
         invalid_indices = set()
         for i, v in enumerate(values):
+            # print(f"[DEBUG aggregate] WeightedAverage idx={i}, value={v.value}, weight={v.weight}")
             if not np.isfinite(v.value) or not np.isfinite(v.weight):
+                # print(f"[DEBUG aggregate] -> dropping idx={i} as invalid")
                 invalid_indices.add(i)
         values = [v for i, v in enumerate(values) if i not in invalid_indices]
 
@@ -72,11 +79,13 @@ def aggregate(values: Sequence["ReportedValue"]) -> Num:
             sum_value = sum(v.value * v.weight for i, v in enumerate(values))
             if sum_weights == 0:
                 warnings.warn("weight is zero")
+                print("[DEBUG aggregate] all weights zero, returning NaN")
                 retval = np.nan
             else:
                 retval = sum_value / sum_weights
         else:
             warnings.warn("No valid stats found")
+            print("[DEBUG aggregate] all entries invalid -> no valid stats, returning NaN")
             retval = np.nan
 
     else:
@@ -341,7 +350,15 @@ class Reporter:
         # Calc mean of current stats and set it as previous epochs stats
         stats = {}
         for key2, values in sub_reporter.stats.items():
+                    # DEBUG: what split, what metric, and how many values?
+            # print(
+            #     f"[DEBUG finish_epoch] epoch={self.epoch}, split={sub_reporter.key}, "
+            #     f"metric={key2}, n_values={len(values)}"
+            # )
             v = aggregate(values)
+            # print(
+            # f"[DEBUG finish_epoch] -> aggregate({sub_reporter.key}.{key2}) = {v}"
+            # )
             stats[key2] = v
 
         stats["time"] = datetime.timedelta(
