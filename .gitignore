@@ -122,3 +122,35 @@ tools/condarc
 tools/lightning_constraints.txt
 tools/versa
 tools/ParallelWaveGAN
+# Extra heavy experiment dirs that are not simply "exp"
+egs*/*/*/backups
+egs*/*/*/exp_*
+egs*/*/*/synth_exp*
+
+# UniVERSA / metric-related heavy caches and checkpoints
+egs2/**/**/versa_cache/
+egs2/**/**/checkpoints/
+
+# If you never want to commit audio artifacts
+**/*.wav
+**/*.flac
+*.pth
+
+# Local UniVERSA artifacts
+egs2/universa_unite/uni_versa1/*.out
+egs2/universa_unite/uni_versa1/*.err
+egs2/universa_unite/uni_versa1/*.log
+egs2/universa_unite/uni_versa1/temp.txt
+egs2/universa_unite/uni_versa1/model_comparison_class.pdf
+
+# Sync helper noise
+sync_universa.*
+
+# Logs & job outputs (global, worry-free)
+*.log
+*.out
+*.err
+
+# Local UniVERSA artifacts
+egs2/universa_unite/uni_versa1/temp.txt
+egs2/universa_unite/uni_versa1/model_comparison_class.pdf

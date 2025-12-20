@@ -79,13 +79,13 @@ randomize_sequential_metric: true # whether to randomize sequential metrics duri
 ########################
 max_epoch: 100
 batch_type: sorted
-batch_size: 16
+batch_size: 32
 grad_clip: -1             # gradient clipping norm
 grad_noise: false         # whether to use gradient noise injection
 sort_in_batch: descending # how to sort data in making batch
 sort_batch: descending    # how to sort created batches
 num_workers: 1            # number of workers of data loader
-accum_grad: 2
+accum_grad: 1
 use_amp: false            # whether to use pytorch amp
 log_interval: 50          # log interval in iterations
 keep_nbest_models: 1      # number of models to keep

@@ -1,0 +1,119 @@
+universa: ar_universa
+universa_conf:
+    embedding_dim: 256
+    audio_encoder_type: transformer
+    audio_encoder_params:
+        num_blocks: 4
+        attention_heads: 4
+        linear_units: 1024
+        dropout_rate: 0.1
+        positional_dropout_rate: 0.1
+        attention_dropout_rate: 0.1
+        input_layer: conv2d
+        normalize_before: true
+        concat_after: false
+        positionwise_layer_type: linear
+        positionwise_conv_kernel_size: 1
+        layer_drop_rate: 0.1
+        qk_norm: false
+        use_flash_attn: false
+    use_hificodec_quantizer: true
+    hificodec_mode: replace         # or "concat"
+    hificodec_cfg:
+      dim: 512
+      n_groups: 8
+      n_codes: 1024
+      residual_layers: 2
+      codebook_loss_lambda: 1.0
+      commitment_loss_lambda: 0.25
+      weight: 0.5 
+    cross_attention_type: multihead
+    cross_attention_params:
+        n_head: 2
+        dropout_rate: 0.1
+    metric_decoder_params:
+        num_blocks: 12
+        attention_heads: 8
+        linear_units: 2048
+        dropout_rate: 0.1
+        positional_dropout_rate: 0.1
+        src_attention_dropout_rate: 0.1
+        self_attention_dropout_rate: 0.1
+        input_layer: embed
+        normalize_before: true
+        concat_after: false
+        layer_drop_rate: 0.1
+        qk_norm: false
+        use_flash_attn: false
+    use_rope: true
+    lsm_weight: 0.1
+    sym_sos: <sos>
+    sym_eos: <eos>
+
+
+# Frontend
+frontend: default
+
+sequential_metric: true # must set to true for ARUniversa-related models
+
+tokenize_numerical_metric: true # must set to true for ARUniversa-related models
+
+randomize_sequential_metric: true # whether to randomize sequential metrics during training
+
+########################
+# Training parameters  #
+########################
+max_epoch: 400
+batch_type: sorted
+batch_size: 12
+grad_clip: -1             # gradient clipping norm
+grad_noise: false         # whether to use gradient noise injection
+sort_in_batch: descending # how to sort data in making batch
+sort_batch: descending    # how to sort created batches
+num_workers: 1            # number of workers of data loader
+accum_grad: 2
+use_amp: false            # whether to use pytorch amp
+log_interval: 50          # log interval in iterations
+keep_nbest_models: 1      # number of models to keep
+num_att_plot: 0           # number of attention figures to be saved in every check
+seed: 777                 # random seed number
+patience: null            # patience for early stopping
+unused_parameters: false   # needed for multi gpu case
+metric_token_info: data/token_list/metric_500_percentile_overall_scale_w-numerical/tokens.json
+use_ref_text: false
+use_ref_audio: false
+
+# Optimizer
+optim: adamw
+optim_conf:
+  lr: 0.001
+
+# Scheduler
+scheduler: warmuplr
+scheduler_conf:
+    warmup_steps: 25000
+
+cudnn_deterministic: false # setting to false accelerates the training speed but makes it non-deterministic
+                           # in the case of GAN-TTS training, we strongly recommend setting to false
+cudnn_benchmark: false     # setting to true might acdelerate the training speed but sometimes decrease it
+                           # therefore, we set to false as a default (recommend trying both cases)
+
+freeze_param:
+  - '^frontend\\..*'                            # stft/frontend/logmel (usually no params)
+  - '^universa\\.audio_encoder\\..*'
+  - '^universa\\.normalize\\..*'
+  - '^universa\\.cross_attention\\..*'
+  - '^universa\\.ref_audio_encoder\\..*'        # if created
+  - '^universa\\.ref_normalize\\..*'            # if created
+  - '^universa\\.text_embedding\\..*'           # if created
+  - '^universa\\.text_encoder\\..*'             # if created
+
+  # Freeze most of the decoder; keep head (and optional final norm) trainable
+  - '^universa\\.decoder\\.(?!output_layer|after_norm).*'
+
+  # In hificodec_mode=replace, this parallel branch is never used; freeze it
+  - '^universa\\.hifq\\.quantizer_modules2\\..*'
+
+  # Optional: freeze pre-quant projection if you want only codebooks to learn
+  # Comment this out if you want the projection to adapt.
+  # - '^universa\\.pre_q_proj\\..*'

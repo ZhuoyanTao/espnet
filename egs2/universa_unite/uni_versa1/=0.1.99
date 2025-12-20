@@ -1,0 +1,42 @@
+Retrieving notices: ...working... done
+Channels:
+ - conda-forge
+ - defaults
+ - nvidia
+Platform: linux-64
+Collecting package metadata (repodata.json): ...working... done
+Solving environment: ...working... done
+
+## Package Plan ##
+
+  environment location: /u/ttao3/.conda/envs/espnet39
+
+  added / updated specs:
+    - libgcc-ng
+    - libstdcxx-ng
+    - sentencepiece
+
+
+The following packages will be downloaded:
+
+    package                    |            build
+    ---------------------------|-----------------
+    openssl-3.6.0              |       h26f9b46_0         3.0 MB  conda-forge
+    ------------------------------------------------------------
+                                           Total:         3.0 MB
+
+The following packages will be UPDATED:
+
+  libgcc                                  14.3.0-h767d61c_4 --> 15.2.0-h767d61c_7 
+  libgcc-ng                               14.3.0-h69a702a_4 --> 15.2.0-h69a702a_7 
+  libgomp                                 14.3.0-h767d61c_4 --> 15.2.0-h767d61c_7 
+  libstdcxx                               14.3.0-h8f9b012_4 --> 15.2.0-h8f9b012_7 
+  libstdcxx-ng                            14.3.0-h4852527_4 --> 15.2.0-h4852527_7 
+  openssl                                  3.5.4-h26f9b46_0 --> 3.6.0-h26f9b46_0 
+
+
+
+Downloading and Extracting Packages: ...working... done
+Preparing transaction: ...working... done
+Verifying transaction: ...working... done
+Executing transaction: ...working... done
