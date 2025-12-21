@@ -82,6 +82,9 @@ use_ref_wav=true   # Whether use reference wave or not.
 use_ref_text=true  # Whether use reference text or not.
 metric2id=    # File path for metric2id mapping.
 metric2type=       # Metric type for metric2id mapping.
+# NISQA analysis related
+nisqa_gt_csv=""       # Path to NISQA ground-truth CSV (utt, mos, ...)
+nisqa_out_dir="nisqa_eval"  # Subdirectory under ${universa_exp} to store NISQA analysis
 
 # Decoding related
 inference_config="" # Config for decoding.
@@ -202,6 +205,9 @@ Options:
     --chunk2s_max_utts  # Max utts per set (0 = all) (default="${chunk2s_max_utts}").
     --chunk2s_chunk_s   # Chunk length in seconds (default="${chunk2s_chunk_s}").
     --chunk2s_hop_s     # Hop length in seconds (default="${chunk2s_hop_s}").
+    # NISQA analysis related
+    --nisqa_gt_csv=""       # Path to NISQA ground-truth CSV (utt, mos, ...)
+    --nisqa_out_dir="nisqa_eval"  # Subdirectory under ${universa_exp} to store NISQA analysis
 
     # [Task dependent] Set the datadir name created by local/data.sh.
     --train_set          # Name of training set (required).
@@ -1059,6 +1065,41 @@ if [ ${stage} -le 13 ] && [ ${stop_stage} -ge 13 ] && ! "${skip_eval}" && "${chu
                 --hop_s "${chunk2s_hop_s}"
     done
 fi
+
+if [ ${stage} -le 14 ] && [ ${stop_stage} -ge 14 ] && [ -n "${nisqa_gt_csv}" ]; then
+    log "Stage 14: NISQA MOS analysis (merge Universa utt_result.json with NISQA ground truth)"
+
+    if ! [ -f "${nisqa_gt_csv}" ]; then
+        log "ERROR: nisqa_gt_csv='${nisqa_gt_csv}' does not exist."
+        exit 1
+    fi
+
+    # For each test set, look for the utt_result.json produced in Stage 10
+    for dset in ${test_sets}; do
+        _dir="${universa_exp}/${inference_tag}/${dset}"
+        _utt_result="${_dir}/utt_result.json"
+
+        if ! [ -f "${_utt_result}" ]; then
+            log "WARNING: ${_utt_result} not found, skip ${dset}."
+            continue
+        fi
+
+        _outdir="${universa_exp}/${nisqa_out_dir}/${dset}"
+        mkdir -p "${_outdir}"
+        _outcsv="${_outdir}/nisqa_eval_${dset}.csv"
+
+        log "Running NISQA MOS analysis on ${dset}"
+        log "  utt_result: ${_utt_result}"
+        log "  gt_csv:     ${nisqa_gt_csv}"
+        log "  out_csv:    ${_outcsv}"
+
+        ${python} local/analyze_nisqa_mos.py \
+            --utt-result "${_utt_result}" \
+            --gt-csv "${nisqa_gt_csv}" \
+            --out-csv "${_outcsv}"
+    done
+fi
+
 
 
 log "Successfully finished. [elapsed=${SECONDS}s]"
