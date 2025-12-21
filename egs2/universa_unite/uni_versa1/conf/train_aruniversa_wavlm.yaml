@@ -71,7 +71,6 @@ freeze_param: [
 sequential_metric: true # must set to true for ARUniversa-related models
 
 tokenize_numerical_metric: true # must set to true for ARUniversa-related models
-
 randomize_sequential_metric: true # whether to randomize sequential metrics during training
 
 ########################
@@ -93,6 +92,10 @@ num_att_plot: 0           # number of attention figures to be saved in every che
 seed: 777                 # random seed number
 patience: null            # patience for early stopping
 unused_parameters: false   # needed for multi gpu case
+metric_token_info: data/token_list/metric_500_percentile_overall_scale_w-numerical/tokens.json
+use_ref_text: false
+use_ref_audio: false
+
 
 # Optimizer
 optim: adamw

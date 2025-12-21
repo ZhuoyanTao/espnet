@@ -1,15 +1,31 @@
+import logging
 import math
 import random
 from typing import Collection, Dict, List, Tuple, Union
 
 import numpy as np
-import scipy
+import scipy.signal
 import soundfile
 import torch
 from typeguard import typechecked
 
-from espnet2.train.preprocessor import detect_non_silence
 from espnet.nets.pytorch_backend.nets_utils import pad_list
+
+logger = logging.getLogger(__name__)
+
+def _np_pad_trim_lastdim_to(a: np.ndarray, K: int) -> np.ndarray:
+    """Right-pad with zeros or trim on the last dimension to width==K."""
+    if a.ndim < 2:
+        # Expect [T, S]; if [T], just return unchanged
+        return a
+    T, S = a.shape[0], a.shape[1]
+    if S == K:
+        return a
+    if S < K:
+        pad = np.zeros((T, K - S), dtype=a.dtype)
+        return np.concatenate([a, pad], axis=1)
+    # S > K
+    return a[:, :K]
 
 
 class CommonCollateFn:
@@ -21,10 +37,14 @@ class CommonCollateFn:
         float_pad_value: Union[float, int] = 0.0,
         int_pad_value: int = -32768,
         not_sequence: Collection[str] = (),
+        fixed_label_width: int = 0,
+        label_keys: Collection[str] = ("spk_labels",),
     ):
         self.float_pad_value = float_pad_value
         self.int_pad_value = int_pad_value
         self.not_sequence = set(not_sequence)
+        self.fixed_label_width = fixed_label_width
+        self.label_keys = tuple(label_keys)
 
     def __repr__(self):
         return (
@@ -40,11 +60,13 @@ class CommonCollateFn:
             float_pad_value=self.float_pad_value,
             int_pad_value=self.int_pad_value,
             not_sequence=self.not_sequence,
+            fixed_label_width=self.fixed_label_width,
+            label_keys=self.label_keys,
         )
 
 
 class HuBERTCollateFn(CommonCollateFn):
-    """Functor class of common_collate_fn()"""
+    """HuBERT functor class of common_collate_fn()"""
 
     @typechecked
     def __init__(
@@ -133,8 +155,8 @@ class HuBERTCollateFn(CommonCollateFn):
             self.rirs = None
 
     def _read_rir_audio_(self):
-        """Read RIR audio from a list of paths.
-
+        """
+        Read RIR audio from a list of paths.
         We cache the audio in memory to reduce I/O.
         """
         rir_path = np.random.choice(self.rir_paths)
@@ -151,8 +173,8 @@ class HuBERTCollateFn(CommonCollateFn):
         return rir
 
     def _read_noise_audio_(self):
-        """Read noise audio from a list of paths.
-
+        """
+        Read noise audio from a list of paths.
         We cache the audio in memory to reduce I/O.
         """
         noise_path = np.random.choice(self.noise_paths)
@@ -167,7 +189,8 @@ class HuBERTCollateFn(CommonCollateFn):
         return noise
 
     def _get_aligned_reverb_signal(self, speech):
-        """Simulate reverberant audio with a random RIR.
+        """
+        Simulate reverberant audio with a random RIR.
 
         It is re-aligned to the original signal for
         compatability with HuBERT-style training.
@@ -195,9 +218,8 @@ class HuBERTCollateFn(CommonCollateFn):
         return speech2.flatten()
 
     def _add_noise_wavlm(self, data, speech, speech_id):
-        """WavLM-style augmentation.
-
-        We randomly choose one of two methods:
+        """
+        WavLM-style augmentation. We randomly choose one of two methods:
             - Denoising -> sample an acoustic noise
             - Separation -> sample another utterance from the batch
 
@@ -212,6 +234,7 @@ class HuBERTCollateFn(CommonCollateFn):
             while noise[0] == speech_id:
                 noise = random.choice(data)
             noise = noise[1]["speech"]
+            speech_length = speech.shape[0]
             noise_db = np.random.uniform(
                 -self.dynamic_mixing_gain_db, self.dynamic_mixing_gain_db
             )
@@ -370,6 +393,8 @@ def common_collate_fn(
     float_pad_value: Union[float, int] = 0.0,
     int_pad_value: int = -32768,
     not_sequence: Collection[str] = (),
+    fixed_label_width: int = None,
+    label_keys: Collection[str] = ("spk_labels",),
 ) -> Tuple[List[str], Dict[str, torch.Tensor]]:
     """Concatenate ndarray-list to an array and convert to torch.Tensor.
 
@@ -398,6 +423,11 @@ def common_collate_fn(
 
     output = {}
     for key in data[0]:
+        # DEBUG ADDITIONS (start)
+        if data[0][key] is None or not isinstance(data[0][key], np.ndarray):
+            logger.error(f"[DEBUG] key='{key}' data[0][key] invalid: "
+                        f"type={type(data[0][key])} utt0={uttids[0]}")
+# DEBUG ADDITIONS (end)
         # NOTE(kamo):
         # Each models, which accepts these values finally, are responsible
         # to repaint the pad_value to the desired value for each tasks.
@@ -407,6 +437,9 @@ def common_collate_fn(
             pad_value = float_pad_value
 
         array_list = [d[key] for d in data]
+        # SPECIAL CASE: make speaker label width consistent across batch
+        if fixed_label_width is not None and key in label_keys:
+            array_list = [_np_pad_trim_lastdim_to(a, fixed_label_width) for a in array_list]
 
         # Assume the first axis is length:
         # tensor_list: Batch x (Length, ...)
@@ -422,3 +455,227 @@ def common_collate_fn(
 
     output = (uttids, output)
     return output
+
+
+class UniversaCollateFn(CommonCollateFn):
+    """Universa functor class of common_collate_fn()"""
+
+    @typechecked
+    def __init__(
+        self,
+        numerical_metrics: List[str],
+        categorical_metrics: List[str],
+        sequential_metric: bool = False,
+        float_pad_value: Union[float, int] = 0.0,
+        metric_pad_value: Union[float, int] = -1e10,
+        metric_token_pad_value: int = 0,
+        int_pad_value: int = -32768,
+        not_sequence: Collection[str] = (),
+        randomize: bool = True,
+    ):
+        """
+        Args:
+            numerical_metrics: List of numerical metric names
+            categorical_metrics: List of categorical metric names
+            sequential_metric: If True, treat the metrics as a sequence
+            float_pad_value: Padding value for float tensors
+            metric_pad_value: Padding value for metrics
+            metric_token_pad_value: Padding value for metric tokens
+            int_pad_value: Padding value for int tensors
+            not_sequence: List of keys that should not be treated as sequences
+            randomize: If True, shuffle the order of the tokens in the tensor
+        """
+        if len(numerical_metrics) == 0 and len(categorical_metrics) == 0:
+            raise ValueError(
+                "At least one of numerical_metrics or categorical_metrics should be provided."
+            )
+
+        super().__init__(
+            float_pad_value=float_pad_value,
+            int_pad_value=int_pad_value,
+            not_sequence=not_sequence,
+        )
+        self.numerical_metrics = numerical_metrics
+        self.categorical_metrics = categorical_metrics
+        self.sequential_metric = sequential_metric
+        self.metric_pad_value = metric_pad_value
+        self.metric_token_pad_value = metric_token_pad_value
+        self.randomize = randomize
+
+        if self.randomize:
+            # Shuffle the items to randomize their order
+            logger.info("Randomizing the order of the metrics.")
+        else:
+            logger.info(
+                "Sorting the items by their keys to maintain a consistent order (from metric2id)."
+            )
+        if len(numerical_metrics) == 0 and len(categorical_metrics) == 0:
+            raise ValueError(
+                "At least one of numerical_metrics or categorical_metrics should be provided."
+            )
+
+    def __repr__(self):
+        return (
+            f"{self.__class__}(float_pad_value={self.float_pad_value}, "
+            f"int_pad_value={self.float_pad_value}), "
+            f"metric_pad_value={self.metric_pad_value}",
+            f"metric_token_pad_value={self.metric_token_pad_value}",
+            f"numerical_metrics={self.numerical_metrics}",
+            f"categorical_metrics={self.categorical_metrics}",
+            f"sequential_metric={self.sequential_metric}",
+        )
+
+    def _create_metric_sequence_tensor(self, metrics_dict):
+        """
+        Creates a tensor from randomized metric label and value token pairs.
+
+        Args:
+            metrics_dict: Dictionary where each value is a tuple of
+                        (metric_label_token, metric_value_token) as integers
+
+        Returns:
+            torch.Tensor: A 1D tensor containing interleaved label and value tokens
+        """
+        # Get all items as a list
+        items = list(metrics_dict.items())
+
+        if self.randomize:
+            # Shuffle the items to randomize their order
+            random.shuffle(items)
+        else:
+            # Sort the items by their keys to maintain a consistent order
+            items.sort(key=lambda x: x[0])
+
+        # Initialize empty list to collect tokens
+        all_tokens = []
+
+        # Interleave label and value tokens
+        for _, (label_token, value_token) in items:
+            all_tokens.append(label_token)
+            all_tokens.append(value_token)
+
+        # Convert the list of integers to a tensor
+        return torch.tensor(all_tokens)
+
+    def __call__(
+        self, data: Collection[Tuple[str, Dict[str, np.ndarray]]]
+    ) -> Tuple[List[str], Dict[str, torch.Tensor]]:
+
+        uttids = [u for u, _ in data]
+        data = [d for _, d in data]
+            # >>> INSERT DEBUG BLOCK HERE <<<
+        # DEBUG ADDITIONS (start)
+        import sys
+        for i, (utt, d) in enumerate(zip(uttids, data)):
+            for k, v in d.items():
+                if k == "metrics":
+                    continue
+                if v is None or not isinstance(v, np.ndarray):
+                    logger.error(f"[DEBUG] bad field before loop: idx={i} utt={utt} key={k} "
+                                f"type={type(v)} value_repr={repr(v)[:120]}")
+        # quick summary for the first sample
+        first_summary = []
+        for k, v in data[0].items():
+            if k == "metrics":
+                continue
+            first_summary.append(f"{k}: dtype={getattr(v,'dtype',None)} shape={getattr(v,'shape',None)}")
+        # logger.info("[DEBUG] first-sample summary: " + " | ".join(first_summary))
+        # DEBUG ADDITIONS (end)
+
+        assert all(set(data[0]) == set(d) for d in data), "dict-keys mismatching"
+        assert all(
+            not k.endswith("_lengths") for k in data[0]
+        ), f"*_lengths is reserved: {list(data[0])}"
+
+        output = {}
+        for key in data[0]:
+            if key == "metrics":
+                continue
+
+            # NOTE(kamo):
+            # Each models, which accepts these values finally, are responsible
+            # to repaint the pad_value to the desired value for each tasks.
+            if data[0][key].dtype.kind == "i":
+                pad_value = self.int_pad_value
+            else:
+                pad_value = self.float_pad_value
+
+            array_list = [d[key] for d in data]
+
+            # DEBUG ADDITIONS (start)
+            try:
+                tensor_list = [torch.from_numpy(a) for a in array_list]
+            except Exception as e:
+                for i, a in enumerate(array_list):
+                    if a is None or not isinstance(a, np.ndarray):
+                        logger.error(f"[DEBUG] from_numpy fail: idx={i} utt={uttids[i]} key={key} "
+                                    f"type={type(a)} repr={repr(a)[:120]}")
+                    else:
+                        logger.error(f"[DEBUG] from_numpy fail: idx={i} utt={uttids[i]} key={key} "
+                                    f"dtype={getattr(a,'dtype',None)} shape={getattr(a,'shape',None)}")
+                raise
+            # DEBUG ADDITIONS (end)
+
+            # Assume the first axis is length:
+            # tensor_list: Batch x (Length, ...)
+            tensor_list = [torch.from_numpy(a) for a in array_list]
+            # tensor: (Batch, Length, ...)
+            tensor = pad_list(tensor_list, pad_value)
+            output[key] = tensor
+
+            # lens: (Batch,)
+            if key not in self.not_sequence:
+                lens = torch.tensor([d[key].shape[0] for d in data], dtype=torch.long)
+                output[key + "_lengths"] = lens
+
+        if data[0].get("metrics") is None:
+            # For inference
+            output = (uttids, output)
+            return output
+        # DEBUG ADDITIONS (start)
+        if any(("metrics" not in d) for d in data):
+            miss = [f"idx={i} utt={uttids[i]}" for i, d in enumerate(data) if "metrics" not in d]
+            logger.error("[DEBUG] samples missing 'metrics': " + ", ".join(miss))
+        # DEBUG ADDITIONS (end)
+
+        metrics_data = [d["metrics"] for d in data]
+        output_metrics = {}
+        if self.sequential_metric:
+            # NOTE(jiatong): For sequential option, we use metric_meta_label
+            # and metric_value
+            assert (
+                len(self.numerical_metrics) == 0
+            ), "numerical_metrics should be empty for sequential option"
+            tensor_list = []
+            for m in metrics_data:
+                token_sequence = self._create_metric_sequence_tensor(m)
+                tensor_list.append(token_sequence)
+            output_metric_tokens = pad_list(tensor_list, self.metric_token_pad_value)
+            lens = torch.tensor(
+                [token_info.shape[0] for token_info in tensor_list], dtype=torch.long
+            )
+            output_metrics["metric_token"] = output_metric_tokens
+            output_metrics["metric_token_lengths"] = lens
+        else:
+            for metric in self.numerical_metrics:
+                tensor = torch.tensor(
+                    [m.get(metric, self.metric_pad_value) for m in metrics_data]
+                )
+                output_metrics[metric] = tensor
+            for metric in self.categorical_metrics:
+                # NOTE(jiatong): For parallel (non-sequential) option, we do not
+                # use metric_meta_label. only use metric_value
+
+                tensor = torch.tensor(
+                    [
+                        m.get(metric, (0, self.metric_token_pad_value))[-1]
+                        for m in metrics_data
+                    ]
+                )
+                output_metrics[metric] = tensor
+
+        output["metrics"] = output_metrics
+
+        output = (uttids, output)
+
+        return output
