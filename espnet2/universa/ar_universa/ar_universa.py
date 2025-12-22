@@ -414,6 +414,9 @@ class ARUniversa(AbsUniversa):
                 audio_enc, ref_audio_enc, ref_audio_enc, ref_audio_mask
             )
             enc_list.append(ref_audio_info)
+        elif self.use_ref_audio:
+            # ref branch expected by decoder, but not provided at inference -> pad zeros
+            enc_list.append(torch.zeros_like(audio_enc))
         if use_ref_text:
             ref_text_mask = (
                 ~make_pad_mask(ref_text_enc_lengths).to(audio_enc.device).unsqueeze(1)
@@ -422,6 +425,8 @@ class ARUniversa(AbsUniversa):
                 audio_enc, ref_text_enc, ref_text_enc, ref_text_mask
             )
             enc_list.append(ref_text_info)
+        elif self.use_ref_text:
+            enc_list.append(torch.zeros_like(audio_enc))
         audio_enc = torch.cat(enc_list, dim=-1)
 
         return audio_enc, audio_enc_lengths

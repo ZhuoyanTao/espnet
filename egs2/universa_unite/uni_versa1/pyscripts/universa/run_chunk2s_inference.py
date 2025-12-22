@@ -75,6 +75,23 @@ def collect_numeric(prefix, obj, out_dict):
     # Everything else: ignore
     return
 
+def pad_stack_1d(chunks, device):
+    """
+    chunks: list of torch.Tensor, each shape (1, T)
+    returns:
+      wav_pad: (B, Tmax)
+      lengths: (B,)
+    """
+    lens = [c.shape[-1] for c in chunks]
+    Tmax = max(lens)
+    B = len(chunks)
+    wav_pad = torch.zeros(B, Tmax, device=device, dtype=chunks[0].dtype)
+    for i, c in enumerate(chunks):
+        wav_pad[i, : c.shape[-1]] = c.squeeze(0)
+    lengths = torch.tensor(lens, device=device, dtype=torch.long)
+    return wav_pad, lengths
+
+
 
 def load_model(expdir: Path, device: str = "cuda"):
     """
@@ -107,6 +124,7 @@ def run_chunk2s_inference(
     max_utts: int = 1000,
     chunk_s: float = 2.0,
     hop_s: float = 2.0,
+    chunk_bs: int = 1,
     device: str = "cuda",
 ):
     """
@@ -218,65 +236,62 @@ def run_chunk2s_inference(
                 hop_s=hop_s,
                 keep_tail=True,
             )
+            
 
             chunk_metrics = []
 
-            for ch in chunks:
-                audio_lengths = torch.tensor(
-                    [ch.shape[-1]], dtype=torch.long, device=device
-                )
+            # process chunks in minibatches
+            for s in range(0, len(chunks), chunk_bs):
+                mb = chunks[s : s + chunk_bs]
+
+                # (B, Tmax), (B,)
+                mb_wav, mb_lens = pad_stack_1d(mb, device=device)
 
                 with torch.no_grad():
-                    pred = model.inference(
-                        audio=ch,
-                        audio_lengths=audio_lengths,
-                    )
-                    # pred is what ARUniversa.inference returned:
-                    # dict from tokenseq2metric + flags:
-                    # {
-                    #   "<metric_name>": [value],
-                    #   ...,
-                    #   "use_tokenizer_metrics": True,
-                    #   "sequential_metrics": True,
-                    #   "encoded_feat": tensor(...),
-                    #   "token_seq": [...] (if enabled)
-                    # }
+                    # Encode once for the whole minibatch
+                    # encode expects (B, T) and lengths (B,)
+                    audio_enc, audio_enc_lens = target.encode(mb_wav, mb_lens)
 
-                # ---- extract metrics directly from pred ----
-                metrics_subset = {}
+                # Beam search + tokenize per chunk (still per-item, but encoder work is batched)
+                for i in range(audio_enc.size(0)):
+                    # nbest hyps for this chunk
+                    nbest_hyps = target.search_module.forward(audio_enc[i])
+                    yseq = nbest_hyps[0].yseq
 
-                for k, v in pred.items():
-                    # skip bookkeeping / heavy stuff
-                    if k in {"use_tokenizer_metrics", "sequential_metrics",
-                             "encoded_feat", "token_seq"}:
-                        continue
+                    # convert token seq -> metric dict (same format you were using)
+                    pred = target.metric_tokenizer.tokenseq2metric(yseq, return_dict=True)
+                    pred["use_tokenizer_metrics"] = True
+                    pred["sequential_metrics"] = True
 
-                    # only keep metrics we decided to keep
-                    if k not in keep_keys:
-                        continue
+                    # ---- extract metrics directly from pred (your same logic) ----
+                    metrics_subset = {}
 
-                    # tokenseq2metric gives list per metric: [val]
-                    if isinstance(v, list) and len(v) == 1 and isinstance(v[0], (float, int)):
-                        metrics_subset[k] = float(v[0])
-                    elif isinstance(v, (float, int)):
-                        metrics_subset[k] = float(v)
-                    else:
-                        # If it’s something else (just in case), store as-is
-                        metrics_subset[k] = v
-
-                # If somehow none of keep_keys showed up, fall back to:
-                # "all numeric-looking metrics except flags"
-                if not metrics_subset:
                     for k, v in pred.items():
                         if k in {"use_tokenizer_metrics", "sequential_metrics",
-                                 "encoded_feat", "token_seq"}:
+                                "encoded_feat", "token_seq"}:
                             continue
+                        if k not in keep_keys:
+                            continue
+
                         if isinstance(v, list) and len(v) == 1 and isinstance(v[0], (float, int)):
                             metrics_subset[k] = float(v[0])
                         elif isinstance(v, (float, int)):
                             metrics_subset[k] = float(v)
+                        else:
+                            metrics_subset[k] = v
 
-                chunk_metrics.append(metrics_subset)
+                    if not metrics_subset:
+                        for k, v in pred.items():
+                            if k in {"use_tokenizer_metrics", "sequential_metrics",
+                                    "encoded_feat", "token_seq"}:
+                                continue
+                            if isinstance(v, list) and len(v) == 1 and isinstance(v[0], (float, int)):
+                                metrics_subset[k] = float(v[0])
+                            elif isinstance(v, (float, int)):
+                                metrics_subset[k] = float(v)
+
+                    chunk_metrics.append(metrics_subset)
+
 
             # 3. Aggregate & write JSONL
             out_obj = {
@@ -343,6 +358,12 @@ def main():
         default=None,
         help="Hop length in seconds (default: same as chunk_s)",
     )
+    parser.add_argument(
+    "--chunk_bs",
+    type=int,
+    default=1,
+    help="Batch size over chunks within an utterance (encoder is batched; beam search still per-chunk)",
+    )
     args = parser.parse_args()
 
     expdir = Path(args.expdir)
@@ -359,6 +380,7 @@ def main():
         max_utts=args.max_utts,
         chunk_s=args.chunk_s,       # <-- use cli
         hop_s=hop_s,                # <-- use cli or default
+        chunk_bs=args.chunk_bs,
         device=args.device,
     )
 
