@@ -217,6 +217,8 @@ def run_chunk2s_inference(
             skip_meta_label_score=False,
             save_token_seq=False,
         )
+    assert getattr(target, "search_module", None) is not None, "search_module not set; did set_inference run?"
+
 
     num_done = 0
     with ReadHelper("scp:" + str(wav_scp)) as reader:
@@ -241,21 +243,50 @@ def run_chunk2s_inference(
             chunk_metrics = []
 
             # process chunks in minibatches
-            for s in range(0, len(chunks), chunk_bs):
-                mb = chunks[s : s + chunk_bs]
+        # process chunks in minibatches
+        for s in range(0, len(chunks), chunk_bs):
+            mb = [c.to(device) for c in chunks[s : s + chunk_bs]]
+            mb_wav, mb_lens = pad_stack_1d(mb, device=device)   # (B, T), (B,)
 
-                # (B, Tmax), (B,)
-                mb_wav, mb_lens = pad_stack_1d(mb, device=device)
+            assert hasattr(target, "frontend") and target.frontend is not None, \
+                "No target.frontend found. This model expects features; need a frontend."
 
-                with torch.no_grad():
-                    # Encode once for the whole minibatch
-                    # encode expects (B, T) and lengths (B,)
-                    audio_enc, audio_enc_lens = target.encode(mb_wav, mb_lens)
+            with torch.no_grad():
+                # 1) waveform -> features  (expect (B, T_frames, F) e.g. F=80)
+                feats, feats_lens = target.frontend(mb_wav, mb_lens)
+
+                # 2) optional normalize (only if the model is configured for it)
+                if getattr(target, "use_normalize", False):
+                    # normalize expects features here
+                    with torch.cuda.amp.autocast(False):
+                        feats, feats_lens = target.normalize(feats, feats_lens)
+
+                # 3) encoder
+                audio_enc, audio_enc_lens, _ = target.audio_encoder(feats, feats_lens)
+
+                # 4) match encode() concatenation behavior if decoder expects ref branches
+                enc_list = [audio_enc]
+                if getattr(target, "use_ref_audio", False):
+                    enc_list.append(torch.zeros_like(audio_enc))
+                if getattr(target, "use_ref_text", False):
+                    enc_list.append(torch.zeros_like(audio_enc))
+                audio_enc = torch.cat(enc_list, dim=-1)
+
+                # ---- PROBE (run once) ----
+                print(f"mb_wav={tuple(mb_wav.shape)} feats={tuple(feats.shape)} audio_enc={tuple(audio_enc.shape)}", flush=True)
+                print(f"mb_lens={mb_lens.tolist()} feats_lens={feats_lens.tolist()} audio_enc_lens={audio_enc_lens.tolist()}", flush=True)
+                raise SystemExit("encode probe done")
 
                 # Beam search + tokenize per chunk (still per-item, but encoder work is batched)
                 for i in range(audio_enc.size(0)):
+                    Tenc = audio_enc.size(1)          # padded time length in this minibatch
+                    Li = int(audio_enc_lens[i].item())# true time length for this sample
+                    if Li != Tenc:
+                        print(f"[PAD DETECTED] utt={utt} mb_start={s} i={i} Li={Li} Tenc={Tenc}", flush=True)
                     # nbest hyps for this chunk
-                    nbest_hyps = target.search_module.forward(audio_enc[i])
+                    enc_i = audio_enc[i, :Li]     # important
+                    nbest_hyps = target.search_module.forward(enc_i)
+                    # nbest_hyps = target.search_module.forward(audio_enc[i])
                     yseq = nbest_hyps[0].yseq
 
                     # convert token seq -> metric dict (same format you were using)

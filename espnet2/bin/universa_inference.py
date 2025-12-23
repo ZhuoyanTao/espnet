@@ -23,6 +23,34 @@ from espnet2.utils.types import str2bool, str2triple_str, str_or_none
 from espnet.utils.cli_utils import get_commandline_args
 
 
+def chunk_1d(wav_1d: torch.Tensor, fs: int, chunk_s: float, hop_s: float):
+    # wav_1d: (T,)
+    chunk_len = int(round(chunk_s * fs))
+    hop_len = int(round(hop_s * fs))
+    T = wav_1d.numel()
+    chunks = []
+    for start in range(0, max(T, 1), hop_len):
+        end = start + chunk_len
+        if start >= T:
+            break
+        c = wav_1d[start:min(end, T)]
+        # keep_tail=True behavior: keep last partial chunk
+        if c.numel() > 0:
+            chunks.append(c)
+        if end >= T:
+            break
+    return chunks  # list of (t_i,)
+
+def pad_stack_1d(chunks, device):
+    lens = [c.numel() for c in chunks]
+    Tmax = max(lens)
+    B = len(chunks)
+    wav_pad = torch.zeros(B, Tmax, device=device, dtype=chunks[0].dtype)
+    for i, c in enumerate(chunks):
+        wav_pad[i, : c.numel()] = c
+    lengths = torch.tensor(lens, device=device, dtype=torch.long)
+    return wav_pad, lengths
+
 class UniversaInference:
     """Inference class for ESPnet Universa model."""
 

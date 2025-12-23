@@ -631,6 +631,7 @@ if ! "${skip_train}"; then
         _logdir="${universa_stats_dir}/logdir"
         mkdir -p "${_logdir}"
 
+
         # Get the minimum number among ${nj} and the number lines of input files
         _nj=$(min "${nj}" "$(<${_train_dir}/${_scp} wc -l)" "$(<${_valid_dir}/${_scp} wc -l)")
 
@@ -1025,18 +1026,18 @@ if [ ${stage} -le 12 ] && [ ${stop_stage} -ge 12 ] && ! "${skip_upload}"; then
     fi
 fi
 
+# -------------------------
+# Stage 13: chunk2s inference via standard universa_inference (copy of Stage 9)
+# -------------------------
 if [ ${stage} -le 13 ] && [ ${stop_stage} -ge 13 ] && ! "${skip_eval}" && "${chunk2s_eval}"; then
-    log "Stage 13: 2s chunk-level Universa analysis (AR-UniVERSA inference on chunks)"
+    log "Stage 13: Chunk2s Decoding (standard universa_inference on chunked wav.scp)"
 
-    # Choose cmd & device consistent with your decoding settings
     if ${gpu_inference}; then
         _cmd="${cuda_cmd}"
         _ngpu=1
-        _device="cuda"
     else
         _cmd="${decode_cmd}"
         _ngpu=0
-        _device="cpu"
     fi
 
     # If user didn't specify sets, default to test_sets
@@ -1044,62 +1045,144 @@ if [ ${stage} -le 13 ] && [ ${stop_stage} -ge 13 ] && ! "${skip_eval}" && "${chu
         chunk2s_sets="${test_sets}"
     fi
 
+    # Where chunked wav.scp live
+    chunk2s_data_root="${dumpdir}/chunk2s"
+
     for dset in ${chunk2s_sets}; do
-        _data="${data_feats}/${dset}"
-        _dir="${universa_exp}/${inference_tag}/${dset}"
-        _logdir="${_dir}/chunk2s_log"
-        mkdir -p "${_dir}" "${_logdir}"
+        _opts=
+        if [ -n "${inference_config}" ]; then
+            _opts+="--config ${inference_config} "
+        fi
 
-        log "Running 2s chunk inference on ${dset} (wav.scp=${_data}/wav.scp)"
-        log "Output -> ${_dir}/chunk2s_metrics.jsonl"
+        # IMPORTANT: chunked wav.scp points to actual wav files -> use "sound"
+        _scp=wav.scp
+        _type=sound
 
-        # We don't bother with JOB arrays here; just 1 job, but keep queue style
-        ${_cmd} --gpu "${_ngpu}" JOB=1:1 "${_logdir}/chunk2s.JOB.log" \
-            ${python} pyscripts/universa/run_chunk2s_inference.py \
-                --expdir "${universa_exp}" \
-                --wav_scp "${_data}/wav.scp" \
-                --output "${_dir}/chunk2s_metrics.jsonl" \
-                --max_utts "${chunk2s_max_utts}" \
-                --device "${_device}" \
-                --chunk_s "${chunk2s_chunk_s}" \
-                --hop_s "${chunk2s_hop_s}"
+        _data="${chunk2s_data_root}/${dset}"
+        if [ ! -d "${_data}" ]; then
+            log "ERROR: chunk2s set folder not found: ${_data}"
+            exit 1
+        fi
+
+        # Put chunk2s outputs under a dedicated subdir to avoid overwriting normal utt-level decode
+        _dir="${universa_exp}/${inference_tag}/${dset}/chunk2s"
+        _logdir="${_dir}/log"
+        mkdir -p "${_logdir}"
+
+        # 0) feats_type is required by downstream steps; ensure it exists
+        if [ -f "${_data}/feats_type" ]; then
+            cp "${_data}/feats_type" "${_dir}/feats_type"
+        else
+            # fallback: copy from raw set if present
+            if [ -f "${data_feats}/${dset}/feats_type" ]; then
+                cp "${data_feats}/${dset}/feats_type" "${_dir}/feats_type"
+            else
+                echo "${feats_type}" > "${_dir}/feats_type"
+            fi
+        fi
+
+        # 1) choose key_file, optionally limit utts
+        key_file="${_data}/${_scp}"
+        if [ ! -f "${key_file}" ]; then
+            log "ERROR: Missing ${key_file}"
+            exit 1
+        fi
+
+        if [ "${chunk2s_max_utts}" -gt 0 ]; then
+            key_file_limited="${_logdir}/wav_head.${chunk2s_max_utts}.scp"
+            head -n "${chunk2s_max_utts}" "${key_file}" > "${key_file_limited}"
+            key_file="${key_file_limited}"
+        fi
+
+        # 2) split scp
+        split_scps=""
+        _nj=$(min "${inference_nj}" "$(<${key_file} wc -l)")
+        for n in $(seq "${_nj}"); do
+            split_scps+=" ${_logdir}/keys.${n}.scp"
+        done
+        # shellcheck disable=SC2086
+        utils/split_scp.pl "${key_file}" ${split_scps}
+
+        log "Chunk2s decoding started for ${dset} ... log: '${_logdir}/universa_inference.*.log'"
+
+        # Add reference audio and text if required (rare for chunk2s, but keep consistent)
+        if [ ${use_ref_wav} = true ] && [ -f "${_data}/ref_wav.scp" ]; then
+            _opts+="--data_path_and_name_and_type ${_data}/ref_wav.scp,ref_audio,${_type} "
+        fi
+        if [ ${use_ref_text} = true ] && [ -f "${_data}/text" ]; then
+            _opts+="--data_path_and_name_and_type ${_data}/text,ref_text,text "
+        fi
+
+        # 3) submit jobs (same as Stage 9)
+        # shellcheck disable=SC2046,SC2086
+        ${_cmd} --gpu "${_ngpu}" JOB=1:"${_nj}" "${_logdir}"/universa_inference.JOB.log \
+            ${python} -m espnet2.bin.universa_inference \
+                --ngpu "${_ngpu}" \
+                --data_path_and_name_and_type ${_data}/${_scp},audio,${_type} \
+                --key_file "${_logdir}"/keys.JOB.scp \
+                --model_file "${universa_exp}"/"${inference_model}" \
+                --train_config "${universa_exp}"/config.yaml \
+                --output_dir "${_logdir}"/output.JOB \
+                ${_opts} ${inference_args} || { cat $(grep -l -i error "${_logdir}"/universa_inference.*.log) ; exit 1; }
+
+        # 4) concat outputs
+        for n in $(seq "${_nj}"); do
+            cat "${_logdir}"/output.${n}/metric.scp || exit 1
+        done > "${_dir}/metric.scp"
+
+        log "Chunk2s decoding done: ${_dir}/metric.scp"
     done
 fi
 
-if [ ${stage} -le 14 ] && [ ${stop_stage} -ge 14 ] && [ -n "${nisqa_gt_csv}" ]; then
-    log "Stage 14: NISQA MOS analysis (merge Universa utt_result.json with NISQA ground truth)"
 
-    if ! [ -f "${nisqa_gt_csv}" ]; then
-        log "ERROR: nisqa_gt_csv='${nisqa_gt_csv}' does not exist."
-        exit 1
-    fi
+# -------------------------
+# Stage 14: chunk2s scoring (copy of Stage 10) — runs only if ref metric.scp exists
+# -------------------------
+if [ ${stage} -le 14 ] && [ ${stop_stage} -ge 14 ] && ! "${skip_eval}" && "${chunk2s_eval}"; then
+    log "Stage 14: Chunk2s Scoring (requires ref metric.scp under dump/chunk2s/<dset>/metric.scp)"
 
-    # For each test set, look for the utt_result.json produced in Stage 10
-    for dset in ${test_sets}; do
-        _dir="${universa_exp}/${inference_tag}/${dset}"
-        _utt_result="${_dir}/utt_result.json"
+    chunk2s_data_root="${dumpdir}/chunk2s"
 
-        if ! [ -f "${_utt_result}" ]; then
-            log "WARNING: ${_utt_result} not found, skip ${dset}."
+    for dset in ${chunk2s_sets:-${test_sets}}; do
+        _data="${chunk2s_data_root}/${dset}"
+        _ref_metrics="${_data}/metric.scp"
+        _dir="${universa_exp}/${inference_tag}/${dset}/chunk2s"
+        _pred_metrics="${_dir}/metric.scp"
+
+        if [ ! -f "${_pred_metrics}" ]; then
+            log "WARNING: pred metrics not found: ${_pred_metrics} (skip ${dset})"
+            continue
+        fi
+        if [ ! -f "${_ref_metrics}" ]; then
+            log "WARNING: ref metrics not found: ${_ref_metrics} (skip ${dset})."
+            log "         If you want scoring, generate chunk-level metric.scp for refs."
             continue
         fi
 
-        _outdir="${universa_exp}/${nisqa_out_dir}/${dset}"
-        mkdir -p "${_outdir}"
-        _outcsv="${_outdir}/nisqa_eval_${dset}.csv"
+        _opts=
+        if [ -n "${metric2type}" ]; then
+            _opts+="--metric2type ${metric2type} "
+        fi
 
-        log "Running NISQA MOS analysis on ${dset}"
-        log "  utt_result: ${_utt_result}"
-        log "  gt_csv:     ${nisqa_gt_csv}"
-        log "  out_csv:    ${_outcsv}"
+        log "Begin chunk2s evaluation on ${dset}, results under ${_dir}"
 
-        ${python} local/analyze_nisqa_mos.py \
-            --utt-result "${_utt_result}" \
-            --gt-csv "${nisqa_gt_csv}" \
-            --out-csv "${_outcsv}"
+        python pyscripts/utils/universa_eval.py \
+            --level utt \
+            --ref_metrics "${_ref_metrics}" \
+            --pred_metrics "${_pred_metrics}" \
+            --skip_missing true \
+            --out_file "${_dir}/utt_result.json" ${_opts}
+
+        if [ -n "${sys_info}" ]; then
+            python pyscripts/utils/universa_eval.py \
+                --level sys \
+                --ref_metrics "${_ref_metrics}" \
+                --pred_metrics "${_pred_metrics}" \
+                --sys_info "${sys_info}" \
+                --skip_missing true \
+                --out_file "${_dir}/sys_result.json" ${_opts}
+        fi
     done
 fi
-
-
 
 log "Successfully finished. [elapsed=${SECONDS}s]"
