@@ -35,19 +35,23 @@ def main():
                 chunk_len = int(round(args.chunk_s * fs))
                 hop_len = int(round(args.hop_s * fs))
 
+                # If too short to make even one full chunk, skip (tail discard policy)
+                if T < chunk_len:
+                    continue
+
                 cidx = 0
-                for start in range(0, T, hop_len):
-                    end = min(start + chunk_len, T)
-                    if start >= T:
-                        break
+                
+                for start in range(0, T - chunk_len + 1, hop_len):
+                    end = start + chunk_len  # full chunk only
                     chunk = wav[start:end]
-                    if chunk.numel() == 0:
+
+                    # (optional safety; should never trigger now)
+                    if chunk.numel() != chunk_len:
                         continue
 
                     chunk_id = f"{utt}__c{cidx:05d}"
                     out_path = wav_out / f"{chunk_id}.wav"
 
-                    # torchaudio.save expects (channels, time)
                     torchaudio.save(str(out_path), chunk.unsqueeze(0), sample_rate=int(fs))
 
                     f_scp.write(f"{chunk_id} {out_path}\n")
@@ -60,8 +64,6 @@ def main():
                     }) + "\n")
 
                     cidx += 1
-                    if end >= T:
-                        break
 
     print(f"Wrote: {chunk_wav_scp}")
     print(f"Wrote: {chunk_map}")
