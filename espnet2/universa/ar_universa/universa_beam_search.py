@@ -233,6 +233,7 @@ class ARUniVERSABeamSearch:
             new_scores[k] = prev_scores[k] + v[idx]
         return new_scores
 
+    #TODO: add priority list, first run chunk then full, we could do greedy search instead. some tokens that are not the highest probability needs to go first. Good as a bonus. 
     def extend(
         self,
         running_hyps: List[Hypothesis],
