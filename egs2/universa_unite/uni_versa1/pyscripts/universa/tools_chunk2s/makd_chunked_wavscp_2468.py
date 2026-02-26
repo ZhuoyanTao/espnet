@@ -7,7 +7,7 @@ import torchaudio
 from kaldiio import ReadHelper
 
 PREFIX_SCHEDULE = [2.0, 4.0, 6.0, 8.0]  # seconds
-
+EPS = 1e-3
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--in_wav_scp", required=True)
@@ -35,15 +35,12 @@ def main():
                 
                 dur_s = T / fs
 
-                prefixes = []
-                for p in PREFIX_SCHEDULE:
-                    if p < dur_s:
-                        prefixes.append(p)
-
                 # always include full utterance
+                prefixes = [p for p in PREFIX_SCHEDULE if p < dur_s - EPS]
                 prefixes.append(dur_s)
+                prefixes = sorted(prefixes)
 
-                for cidx, p in enumerate(prefixes):
+                for p in prefixes:
                     end = int(round(p * fs))
                     chunk = wav[:end]
 
@@ -59,7 +56,7 @@ def main():
                         "fs": int(fs),
                         "start_s": 0.0,
                         "end_s": float(p),
-                        "is_full": p >= dur_s - 1e-3,
+                        "is_full": p >= dur_s - EPS,
                     }) + "\n")
 
         print(f"Wrote: {chunk_wav_scp}")

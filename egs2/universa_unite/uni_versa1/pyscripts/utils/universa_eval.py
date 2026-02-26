@@ -535,21 +535,27 @@ def load_metrics(metrics_file, detect_metric_names=False):
                 raise ValueError(
                     "original line: {}, {}".format(line, metrics.replace("'", '"'))
                 )
+            # if detect_metric_names:
+            #     metric_names = set(utt2metrics[utt].keys())
+            #     metric_names.update(metric_names)
             if detect_metric_names:
-                metric_names = set(utt2metrics[utt].keys())
-                metric_names.update(metric_names)
+                metric_names.update(utt2metrics[utt].keys())
 
     return utt2metrics, metric_names
 
 
 if __name__ == "__main__":
     args = get_parser().parse_args()
-    ref_metrics, ref_metric_names = load_metrics(
-        args.ref_metrics, detect_metric_names=True
-    )
-    pred_metrics, metric_names = load_metrics(
-        args.pred_metrics, detect_metric_names=True
-    )
+    # ref_metrics, ref_metric_names = load_metrics(
+    #     args.ref_metrics, detect_metric_names=True
+    # )
+    # pred_metrics, metric_names = load_metrics(
+    #     args.pred_metrics, detect_metric_names=True
+    # )
+    ref_metrics, ref_metric_names = load_metrics(args.ref_metrics, detect_metric_names=True)
+    pred_metrics, pred_metric_names = load_metrics(args.pred_metrics, detect_metric_names=True)
+
+    metric_names = set(ref_metric_names).union(set(pred_metric_names))
     if args.metric2type is None:
         metric2type = {metric_name: "numerical" for metric_name in metric_names}
     else:
@@ -578,16 +584,21 @@ if __name__ == "__main__":
             # Checks for missing utterances and metrics
             if utt not in ref_metrics.keys():
                 metric_count["miss_part_ref"] += 1
-            if metric not in pred_metrics[utt]:
+            # if metric not in pred_metrics[utt]:
+            #     if args.skip_missing:
+            #         metric_count["miss_part_pred"] += 1
+            #         continue
+            #     raise ValueError(f"Missing metric: {metric} in prediction metric.scp")
+            # if metric not in ref_metrics[utt]:
+            #     if args.skip_missing:
+            #         metric_count["miss_part_ref"] += 1
+            #         continue
+            if metric not in pred_metrics[utt] or metric not in ref_metrics[utt]:
                 if args.skip_missing:
-                    metric_count["miss_part_pred"] += 1
                     continue
-                raise ValueError(f"Missing metric: {metric} in prediction metric.scp")
-            if metric not in ref_metrics[utt]:
-                if args.skip_missing:
-                    metric_count["miss_part_ref"] += 1
-                    continue
-                raise ValueError(f"Missing metric: {metric} in reference metric.scp")
+                else:
+                    raise ValueError(f"Missing metric {metric} for utt {utt}")
+                # raise ValueError(f"Missing metric: {metric} in reference metric.scp")
             if args.level == "utt":
                 pred_metric.append(pred_metrics[utt][metric])
                 ref_metric.append(ref_metrics[utt][metric])
@@ -600,7 +611,7 @@ if __name__ == "__main__":
                 ref_metric[sys_id].append(ref_metrics[utt][metric])
 
         if args.level == "utt":
-            if metric2type is None or metric2type[metric] == "numerical":
+            if metric2type is None or metric2type.get(metric, "numerical") == "numerical":
                 try:
                     eval_results = calculate_regression_metrics(
                         ref_metric, pred_metric, prefix="utt_{}".format(metric)
@@ -621,7 +632,7 @@ if __name__ == "__main__":
                     )
                     eval_results = {}
         else:
-            if metric2type[metric] == "numerical":
+            if metric2type.get(metric, "numerical") == "numerical":
                 pred_sys_avg = []
                 ref_sys_avg = []
                 for sys_id in pred_metric.keys():
@@ -634,7 +645,7 @@ if __name__ == "__main__":
                 eval_results = calculate_regression_metrics(
                     ref_sys_avg, pred_sys_avg, prefix="sys_{}".format(metric)
                 )
-            elif metric2type[metric] == "classification":
+            elif metric2type.get(metric, "numerical") == "classification":
                 eval_results = calculate_system_classification_metrics(
                     ref_metric, pred_metric, metric, prefix="sys"
                 )
