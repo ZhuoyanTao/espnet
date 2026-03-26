@@ -453,6 +453,23 @@ def common_collate_fn(
             lens = torch.tensor([d[key].shape[0] for d in data], dtype=torch.long)
             output[key + "_lengths"] = lens
 
+    # ===== DEBUG METRIC TENSOR DTYPES =====
+    import torch
+    logger.warning("==== UNIVERSA COLLATE OUTPUT DTYPES ====")
+
+    for k, v in output.items():
+        if k == "metrics":
+            logger.warning("---- metrics dict ----")
+            for mk, mv in v.items():
+                if torch.is_tensor(mv):
+                    logger.warning(f"[metrics] {mk}: dtype={mv.dtype}, shape={tuple(mv.shape)}")
+        else:
+            if torch.is_tensor(v):
+                logger.warning(f"{k}: dtype={v.dtype}, shape={tuple(v.shape)}")
+
+    logger.warning("========================================")
+    # ======================================
+
     output = (uttids, output)
     return output
 
@@ -472,6 +489,7 @@ class UniversaCollateFn(CommonCollateFn):
         int_pad_value: int = -32768,
         not_sequence: Collection[str] = (),
         randomize: bool = True,
+        defer_full_meta: bool = False,
     ):
         """
         Args:
@@ -501,6 +519,8 @@ class UniversaCollateFn(CommonCollateFn):
         self.metric_pad_value = metric_pad_value
         self.metric_token_pad_value = metric_token_pad_value
         self.randomize = randomize
+        self.defer_full_meta = defer_full_meta
+        self.debug_order = False
 
         if self.randomize:
             # Shuffle the items to randomize their order
@@ -536,15 +556,64 @@ class UniversaCollateFn(CommonCollateFn):
         Returns:
             torch.Tensor: A 1D tensor containing interleaved label and value tokens
         """
-        # Get all items as a list
+        # # Get all items as a list
         items = list(metrics_dict.items())
-
-        if self.randomize:
-            # Shuffle the items to randomize their order
-            random.shuffle(items)
+        if not self.defer_full_meta:
+            if self.randomize:
+                # Shuffle the items to randomize their order
+                random.shuffle(items)
+            else:
+                # Sort the items by their keys to maintain a consistent order
+                items.sort(key=lambda x: x[0])
         else:
-            # Sort the items by their keys to maintain a consistent order
-            items.sort(key=lambda x: x[0])
+            # items = list(metrics_dict.items())
+            if self.debug_order:
+                logger.info(
+                    "[COLLATE DEBUG] Original metric order: "
+                    + ", ".join([name for name, _ in items])
+                )
+
+            # ------------------------------
+            # Separate full vs non-full
+            # ------------------------------
+            non_full_items = []
+            full_items = []
+
+            for metric_name, token_pair in items:
+                if metric_name.endswith("_full"):
+                    full_items.append((metric_name, token_pair))
+                else:
+                    non_full_items.append((metric_name, token_pair))
+            if self.debug_order:
+                logger.info(
+                    "[COLLATE DEBUG] Non-full metrics: "
+                    + ", ".join([name for name, _ in non_full_items])
+                )
+                logger.info(
+                    "[COLLATE DEBUG] Full metrics: "
+                    + ", ".join([name for name, _ in full_items])
+                )
+
+            # ------------------------------
+            # Apply randomize / sort within groups
+            # ------------------------------
+            if self.randomize:
+                random.shuffle(non_full_items)
+                random.shuffle(full_items)
+            else:
+                non_full_items.sort(key=lambda x: x[0])
+                full_items.sort(key=lambda x: x[0])
+
+            # ------------------------------
+            # Combine: non_full first, full last
+            # ------------------------------
+            items = non_full_items + full_items
+            
+            if self.debug_order:
+                logger.info(
+                    "[COLLATE DEBUG] Final metric order: "
+                    + ", ".join([name for name, _ in items])
+                )
 
         # Initialize empty list to collect tokens
         all_tokens = []

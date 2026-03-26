@@ -451,12 +451,37 @@ class ARUniversa(AbsUniversa):
             acc_ar_decoder (torch.Tensor): Accuracy tensor for AR decoder.
             value_ar_decoder (torch.Tensor): Value tensor for AR decoder.
         """
-
+        # logging.warning("====== BEFORE add_sos_eos ======")
+        # logging.warning(
+        #     f"metric_token dtype={metric_token.dtype}, "
+        #     f"shape={tuple(metric_token.shape)}, "
+        #     f"numel={metric_token.numel()}"
+        # )
+        # logging.warning(
+        #     f"metric_token_lengths={metric_token_lengths}"
+        # )
+        # logging.warning("================================")
         ys_in_pad, ys_out_pad = add_sos_eos(
             metric_token, self.sos, self.eos, self.metric_token_pad_value
         )
         ys_in_lens = metric_token_lengths + 1
 
+
+        # logging.warning("====== BEFORE DECODER CALL ======")
+
+        # if torch.is_tensor(ys_in_pad):
+        #     logging.warning(
+        #         f"ys_in_pad dtype={ys_in_pad.dtype}, "
+        #         f"shape={tuple(ys_in_pad.shape)}, "
+        #         f"device={ys_in_pad.device}, "
+        #         f"min={ys_in_pad.min().item()}, "
+        #         f"max={ys_in_pad.max().item()}"
+        #     )
+        # else:
+        #     logging.warning(f"ys_in_pad is type {type(ys_in_pad)}")
+
+        # logging.warning("=================================")
+        
         # 1. Forward decoder
         decoder_out, _ = self.decoder(
             audio_enc, audio_enc_lengths, ys_in_pad, ys_in_lens
@@ -484,6 +509,7 @@ class ARUniversa(AbsUniversa):
         metric_list: List[str],
         skip_meta_label_score: bool,
         save_token_seq: bool = False,
+        defer_full_meta: bool = False,
     ) -> None:
         """Set inference mode.
 
@@ -527,6 +553,7 @@ class ARUniversa(AbsUniversa):
             token_list=self.metric_tokenizer.get_token_list(),
             skip_meta_label_score=skip_meta_label_score,
             beam_masking=beam_masking,
+            defer_full_meta=defer_full_meta,  # <<< pass-through
         )
 
     @typechecked

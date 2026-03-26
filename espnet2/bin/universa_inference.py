@@ -68,6 +68,7 @@ class UniversaInference:
         save_token_seq: bool = False,
         use_fixed_order: bool = False,
         fixed_metric_name_order: str = "",
+        defer_full_meta: bool = False,   # NEW
     ):
         """Initialize UniversaInference class."""
 
@@ -105,11 +106,12 @@ class UniversaInference:
                 metric_list=metric_list,
                 skip_meta_label_score=skip_meta_label_score,
                 save_token_seq=save_token_seq,
+                defer_full_meta=defer_full_meta,
             )
 
         logging.info(f"Frontend: {model.frontend}")
         logging.info(f"Universa: {model.universa}")
-
+        logging.info(f"defer_full_meta: {defer_full_meta}")
     @torch.no_grad()
     @typechecked
     def __call__(
@@ -208,6 +210,7 @@ def inference(
     use_fixed_order: bool,
     fixed_metric_name_order: str,
     allow_variable_data_keys: bool,
+    defer_full_meta: bool,   # NEW
 ):
     """Run inference."""
     # setup logger
@@ -246,6 +249,7 @@ def inference(
         use_fixed_order=use_fixed_order,
         fixed_metric_name_order=fixed_metric_name_order,
         device=device,
+        defer_full_meta=defer_full_meta,   #NEW
     )
 
     # 3. setup data loader
@@ -324,6 +328,12 @@ def get_parser():
         type=int,
         default=1,
         help="The batch size for inference",
+    )
+    parser.add_argument(
+        "--defer_full_meta",
+        type=str2bool,
+        default=False,
+        help="Whether to defer *_full@meta_label tokens to the end during decoding.",
     )
 
     group = parser.add_argument_group("Input data related")

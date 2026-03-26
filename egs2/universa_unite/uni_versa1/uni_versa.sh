@@ -34,7 +34,7 @@ skip_eval=false      # Skip decoding and evaluation stages.
 skip_upload=true     # Skip packing and uploading stages.
 ngpu=1               # The number of gpus ("0" uses cpu, otherwise use gpu).
 num_nodes=1          # The number of nodes.
-nj=32                # The number of parallel jobs.
+nj=8                # The number of parallel jobs.
 inference_nj=32      # The number of parallel jobs in decoding.
 gpu_inference=false  # Whether to perform gpu decoding.
 dumpdir=dump         # Directory to dump features.
@@ -64,7 +64,7 @@ bpe_char_cover=1.0  # character coverage when modeling BPE for text.
 
 # Metric Tokenization related
 tokenize_metric=true # Whether to tokenize numerical metrics or not.
-metric_token_size=100 # The number of metric vocabulary for text.
+metric_token_size=500 # The number of metric vocabulary for text.
 metric_token_method=percentile # Mode of metric tokenization (percentile only).
 metric_token_percentile_distribution=linear # Distribution of percentile for metric tokenization.
 metric2token_size= # The number of metric2token vocabulary for text.
@@ -91,7 +91,8 @@ inference_config="" # Config for decoding.
 inference_args=""   # Arguments for decoding (e.g., "--threshold 0.75").
                     # Note that it will overwrite args in inference config.
 inference_tag=""    # Suffix for decoding directory.
-inference_model=latest.pth # Model path for decoding.
+inference_model=14epoch.pth # Model path for decoding.
+# inference_model=valid.loss.best.pth # Model path for decoding.
                                    # e.g.
                                    # inference_model=train.loss.best.pth
                                    # inference_model=3epoch.pth
@@ -306,7 +307,7 @@ fi
 
 # The directory used for collect-stats mode
 if [ -z "${universa_stats_dir}" ]; then
-    universa_stats_dir="${expdir}/universa_stats_${feats_type}"
+    universa_stats_dir="${expdir}/universa_stats_${tag}"
 fi
 # The directory used for training commands
 if [ -z "${universa_exp}" ]; then
@@ -770,7 +771,7 @@ if ! "${skip_train}"; then
             --multiprocessing_distributed true -- \
             ${python} -m "espnet2.bin.universa_train" \
                 --use_preprocessor true \
-                --resume true \
+                --resume false \
                 --fold_length "${audio_fold_length}" \
                 --train_data_path_and_name_and_type "${_train_dir}/${_scp},audio,${_type}" \
                 --train_data_path_and_name_and_type "${_train_dir}/metric.scp,metrics,metric" \
@@ -905,6 +906,7 @@ if ! "${skip_eval}"; then
             _data="${data_feats}/${dset}"
             _ref_metrics="${_data}/metric.scp"
             _dir="${universa_exp}/${inference_tag}/${dset}"
+            log "!!! stage 10 _dir is ${_dir}"
             _pred_metrics="${_dir}/metric.scp"
 
             _opts=
@@ -913,6 +915,10 @@ if ! "${skip_eval}"; then
             fi
 
             log "Begin evaluation on ${dset}, results are written under ${_dir}"
+            log "Begin chunk2s evaluation on ${dset}, results under ${_dir}"
+            log "_ref_metrics: ${_ref_metrics}"
+            log "_pred_metrics: ${_pred_metrics}"
+            log "outfile: ${_dir}/utt_result.json"
 
             log "Perform utt-level evaluation, results are written in ${_dir}/utt_result.json"
             python pyscripts/utils/universa_eval.py \
@@ -923,7 +929,7 @@ if ! "${skip_eval}"; then
                 --out_file "${_dir}/utt_result.json" ${_opts}
 
             log "Utterance-level evaluation results are as follows:"
-            # cat "${_dir}/utt_result.json"
+            cat "${_dir}/utt_result.json"
 
             if [ -n "${sys_info}" ]; then
                 log "Perform system-level evaluation using ${sys_info}, results are written in ${_dir}/sys_result.json"
@@ -1163,8 +1169,6 @@ if [ ${stage} -le 14 ] && [ ${stop_stage} -ge 14 ] && ! "${skip_eval}" && "${chu
         if [ -n "${metric2type}" ]; then
             _opts+="--metric2type ${metric2type} "
         fi
-
-        log "Begin chunk2s evaluation on ${dset}, results under ${_dir}"
 
         python pyscripts/utils/universa_eval.py \
             --level utt \

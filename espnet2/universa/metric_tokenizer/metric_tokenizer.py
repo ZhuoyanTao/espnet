@@ -70,7 +70,7 @@ class MetricTokenizer(AbsMetricTokenizer):
         )
         # If you want to check meta_label tokens:
         meta_tokens = [t for t in self.vocab if t.endswith("@meta_label")]
-        logger.info("Meta-label tokens in VOCAB: %s", meta_tokens[:50])
+        logger.info("Meta-label tokens in VOCAB: %s", meta_tokens)
 
     def get_metric_meta_label(self, metric_name: str) -> int:
         """

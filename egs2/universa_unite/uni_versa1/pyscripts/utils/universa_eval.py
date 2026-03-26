@@ -566,7 +566,10 @@ if __name__ == "__main__":
         sys_info is not None or args.level == "utt"
     ), "System information is required for system-level evaluation"
     final_result = {}
-
+    
+    print("REF metric names:", ref_metric_names)
+    print("PRED metric names:", pred_metric_names)
+    print("INTERSECTION:", set(ref_metric_names) & set(pred_metric_names))
     for metric in metric_names:
         metric_count = {
             "miss_all": 0,
@@ -580,7 +583,13 @@ if __name__ == "__main__":
             pred_metric, ref_metric = [], []
         else:
             pred_metric, ref_metric = {}, {}
-        for utt in pred_metrics.keys():
+        common_utts = set(pred_metrics.keys()).intersection(set(ref_metrics.keys()))
+        print("DEBUG: total ref utts:", len(ref_metrics))
+        print("DEBUG: total pred utts:", len(pred_metrics))
+        print("DEBUG: total common utts:", len(common_utts))
+        print("DEBUG: first 5 ref utts:", list(ref_metrics.keys())[:5])
+        print("DEBUG: first 5 pred utts:", list(pred_metrics.keys())[:5])
+        for utt in common_utts:
             # Checks for missing utterances and metrics
             if utt not in ref_metrics.keys():
                 metric_count["miss_part_ref"] += 1

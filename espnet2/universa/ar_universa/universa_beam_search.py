@@ -57,6 +57,7 @@ class ARUniVERSABeamSearch:
         token_list: List[str] = None,
         skip_meta_label_score: bool = False,
         beam_masking: Dict[int, Tuple[int, int]] = None,
+        defer_full_meta: bool = False,   # NEW FLAG
     ):
         """Initialize beam search.
 
@@ -83,6 +84,12 @@ class ARUniVERSABeamSearch:
         self.skip_meta_label_score = skip_meta_label_score
         self.beam_masking = beam_masking
         self.scorers = dict()
+        self.defer_full_meta = defer_full_meta #NEW
+        if self.defer_full_meta:
+            logger.info("Meta-label decoding constraint enabled: *_full@meta_label deferred to last.")
+        else:
+            logger.info("Meta-label decoding constraint disabled: original ordering.")
+
 
         # this module dict is required for recursive cast
         # `self.to(device, dtype)` in `recog.py`
@@ -102,6 +109,11 @@ class ARUniVERSABeamSearch:
         self.token_list = token_list
         self.beam_size = beam_size
         self.n_vocab = vocab_size
+        logger.info(f"Initial meta label ids: {self.meta_label_for_search}")
+
+        if self.token_list is not None:
+            readable = [self.token_list[i] for i in self.meta_label_for_search]
+            logger.info(f"Readable meta labels: {readable}")
 
     def init_hyp(self, x: torch.Tensor) -> Hypothesis:
         """Initialize a hypothesis.
@@ -247,7 +259,30 @@ class ARUniVERSABeamSearch:
         """
         extended_hyps = []
         for hyp in running_hyps:
-            part_ids = torch.tensor(hyp.unused_meta_label_ids, device=x.device)
+            # part_ids = torch.tensor(hyp.unused_meta_label_ids, device=x.device)
+            available_ids = hyp.unused_meta_label_ids
+
+            # --------------------------------------------------
+            # OPTIONAL: Defer *_full@meta_label tokens to last
+            # --------------------------------------------------
+            if self.defer_full_meta and self.token_list is not None:
+                non_full_ids = []
+                full_ids = []
+
+                for i in available_ids:
+                    token = self.token_list[i]
+                    if token.endswith("_full@meta_label"):
+                        full_ids.append(i)
+                    else:
+                        non_full_ids.append(i)
+
+                # If non-full still exist → restrict to them
+                if len(non_full_ids) > 0:
+                    available_ids = non_full_ids
+                else:
+                    available_ids = full_ids
+
+            part_ids = torch.tensor(available_ids, device=x.device)
             if self.skip_meta_label_score:
                 weighted_scores = torch.zeros(
                     self.n_vocab, dtype=x.dtype, device=x.device
@@ -414,6 +449,7 @@ def beam_search(
     scorers: Dict[str, Any],
     weights: Dict[str, float],
     token_list: List[str] = None,
+    defer_full_meta: bool = False,   # NEW
 ) -> list:
     """Perform beam search with scorers.
 
@@ -442,5 +478,6 @@ def beam_search(
         sos=sos,
         eos=eos,
         token_list=token_list,
+        defer_full_meta=defer_full_meta,   #NEW 
     ).forward(x=x)
     return [h.asdict() for h in ret]

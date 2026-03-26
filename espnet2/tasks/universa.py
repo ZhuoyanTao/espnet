@@ -245,6 +245,12 @@ class UniversaTask(AbsTask):
             default=False,
             help="Whether to randomize sequential metric or not",
         )
+        group.add_argument(
+            "--defer_full_meta",
+            type=str2bool,
+            default=False,
+            help="Whether to defer *_full metrics to last during training and inference.",
+        )
 
         for class_choices in cls.class_choices_list:
             # Append --<name> and --<name>_conf.
@@ -293,6 +299,12 @@ class UniversaTask(AbsTask):
         else:
             not_sequence = ["metrics"]
 
+        defer_full_meta = getattr(args, "defer_full_meta", False)
+
+        if defer_full_meta:
+            logging.info("Task: defer_full_meta is ENABLED.")
+        else:
+            logging.info("Task: defer_full_meta is DISABLED.")
         # To differentiate the padding value for metrics' value
         return UniversaCollateFn(
             numerical_metrics=numerical_metrics,
@@ -304,6 +316,7 @@ class UniversaTask(AbsTask):
             int_pad_value=0,
             not_sequence=not_sequence,
             randomize=randomize_sequential_metric,
+            defer_full_meta=defer_full_meta,
         )
 
     @classmethod

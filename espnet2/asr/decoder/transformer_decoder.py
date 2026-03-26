@@ -150,6 +150,18 @@ class BaseTransformerDecoder(
                 memory_mask, (0, padlen), "constant", False
             )
 
+                # DEBUG: log dtype and range of tgt before embedding
+        if logging.getLogger().isEnabledFor(logging.DEBUG):
+            try:
+                logging.debug(
+                    "Decoder.forward: tgt dtype=%s device=%s shape=%s min=%s max=%s",
+                    tgt.dtype, tgt.device, tuple(tgt.shape),
+                    float(tgt.min()) if tgt.numel() > 0 else None,
+                    float(tgt.max()) if tgt.numel() > 0 else None,
+                )
+            except Exception:
+                logging.debug("Decoder.forward: failed to log tgt tensor summary")
+
         x = self.embed(tgt)
         intermediate_outs = []
         for layer_idx, decoder_layer in enumerate(self.decoders):
