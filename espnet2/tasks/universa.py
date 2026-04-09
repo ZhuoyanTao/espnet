@@ -11,6 +11,7 @@ from typeguard import typechecked
 
 from espnet2.asr.frontend.abs_frontend import AbsFrontend
 from espnet2.asr.frontend.default import DefaultFrontend
+from espnet2.asr.frontend.causal_s3prl import CausalS3prlFrontend
 from espnet2.asr.frontend.s3prl import S3prlFrontend
 from espnet2.asr.frontend.windowing import SlidingWindow
 from espnet2.tasks.abs_task import AbsTask
@@ -35,6 +36,7 @@ frontend_choices = ClassChoices(
         default=DefaultFrontend,
         sliding_window=SlidingWindow,
         s3prl=S3prlFrontend,
+        causal_s3prl=CausalS3prlFrontend,
     ),
     type_check=AbsFrontend,
     default="default",

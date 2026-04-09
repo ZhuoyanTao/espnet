@@ -150,17 +150,19 @@ class MetricTokenizer(AbsMetricTokenizer):
         Returns:
             Index of the appropriate value token
         """
-        if metric_name == "category":
-            # For categorical values, find its index in the list
+        thresholds = self.tokenizer_config[metric_name]
+        # Detect categorical metrics: any metric whose config is a list of strings.
+        # Legacy behaviour: metric_name == "category" is also categorical.
+        if metric_name == "category" or (thresholds and isinstance(thresholds[0], str)):
             try:
-                return self.tokenizer_config[metric_name].index(value)
+                return thresholds.index(value)
             except ValueError:
                 raise ValueError(
-                    f"Invalid category value: {value} for metric {metric_name}"
+                    f"Invalid categorical value: {value!r} for metric {metric_name}. "
+                    f"Valid values: {thresholds}"
                 )
         else:
             # For numerical metrics with thresholds
-            thresholds = self.tokenizer_config[metric_name]
             # Find the first threshold that the value is less than
             for i, threshold in enumerate(thresholds):
                 if value < threshold:
@@ -260,12 +262,13 @@ class MetricTokenizer(AbsMetricTokenizer):
             if metric_name not in self.tokenizer_config.keys():
                 raise ValueError(f"Unknown metric in decoding: {metric_name}")
 
-            # For category, get the actual category value
-            if metric_name == "category":
-                result[metric_name] = [self.tokenizer_config[metric_name][value_index]]
+            # For categorical metrics (including legacy "category" and any
+            # metric whose config list contains strings), return the label.
+            thresholds = self.tokenizer_config[metric_name]
+            if metric_name == "category" or (thresholds and isinstance(thresholds[0], str)):
+                result[metric_name] = [thresholds[value_index]]
             else:
                 # For numerical metrics, represent as ranges
-                thresholds = self.tokenizer_config[metric_name]
                 if value_index == 0:
                     result[metric_name] = [thresholds[0]]
                 elif value_index == len(thresholds):

@@ -1,0 +1,101 @@
+# Ablation 2: Causal WavLM-Large + turn-taking tokens ONLY (no quality metrics)
+# Uses a token list with only the 5 turn-taking classes.
+# Isolates the contribution of the quality signal to turn-taking performance.
+# ------------------------------------------------------------------
+
+universa: ar_universa
+universa_conf:
+  embedding_dim: 256
+  audio_encoder_type: transformer
+  audio_encoder_params:
+    num_blocks: 4
+    attention_heads: 4
+    linear_units: 1024
+    dropout_rate: 0.1
+    positional_dropout_rate: 0.1
+    attention_dropout_rate: 0.1
+    input_layer: conv2d
+    normalize_before: true
+    concat_after: false
+    positionwise_layer_type: linear
+    positionwise_conv_kernel_size: 1
+    layer_drop_rate: 0.1
+    qk_norm: false
+    use_flash_attn: false
+  cross_attention_type: multihead
+  cross_attention_params:
+    n_head: 2
+    dropout_rate: 0.1
+  metric_decoder_params:
+    num_blocks: 12
+    attention_heads: 8
+    linear_units: 2048
+    dropout_rate: 0.1
+    positional_dropout_rate: 0.1
+    src_attention_dropout_rate: 0.1
+    self_attention_dropout_rate: 0.1
+    input_layer: embed
+    normalize_before: true
+    concat_after: false
+    layer_drop_rate: 0.1
+    qk_norm: false
+    use_flash_attn: false
+  use_rope: true
+  lsm_weight: 0.1
+  sym_sos: "<sos>"
+  sym_eos: "<eos>"
+  use_ref_audio: false
+  use_ref_text: false
+
+# Causal WavLM-Large frontend
+frontend: causal_s3prl
+frontend_conf:
+  frontend_conf:
+    upstream: wavlm_large
+  download_dir: ./hub
+  multilayer_feature: true
+
+freeze_param:
+  - "frontend.upstream"
+
+sequential_metric: true
+tokenize_numerical_metric: true
+randomize_sequential_metric: false  # only one metric, no randomization needed
+
+# Separate token list with ONLY turn-taking tokens
+metric_token_info: data/token_list/turn_taking_only_tokens/tokens.json
+
+max_epoch: 50
+batch_type: sorted
+batch_size: 8
+grad_clip: 5.0
+grad_noise: false
+sort_in_batch: descending
+sort_batch: descending
+num_workers: 4
+accum_grad: 4
+use_amp: true
+log_interval: 50
+keep_nbest_models: 5
+num_att_plot: 0
+seed: 777
+patience: null
+unused_parameters: false
+
+optim: adamw
+optim_conf:
+  lr: 0.0001
+  weight_decay: 0.01
+
+scheduler: warmuplr
+scheduler_conf:
+  warmup_steps: 10000
+
+ignore_init_mismatch: true
+cudnn_deterministic: false
+cudnn_benchmark: false
+
+best_model_criterion:
+  - - valid
+    - loss
+    - min

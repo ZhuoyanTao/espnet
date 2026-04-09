@@ -146,6 +146,10 @@ egs2/universa_unite/uni_versa1/model_comparison_class.pdf
 # Sync helper noise
 sync_universa.*
 
+# Switchboard slu1 download artifacts (gdown output)
+egs2/swbd/slu1/turn_take_splits.zip
+egs2/swbd/slu1/turn_take_splits/
+
 # Logs & job outputs (global, worry-free)
 *.log
 *.out
