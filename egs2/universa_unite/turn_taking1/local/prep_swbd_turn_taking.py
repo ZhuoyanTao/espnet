@@ -29,8 +29,9 @@ metric.scp format example:
 Chunk design
 ------------
   context_s : audio window fed to the model (default 4.0 s)
-  stride_s  : window stride during TRAINING data creation (default 2.0 s)
-              Use 0.04 s at inference for 40 ms frame-level predictions.
+  stride_s  : window stride during TRAINING data creation (default 0.04 s)
+              Matches the 40 ms label granularity so every labeled frame in
+              the subsampled CSV becomes one training chunk.
   chunk_s   : Switchboard label granularity (always 0.04 s)
 
 The turn-taking label for a window is the label of the LAST 40 ms frame
@@ -143,13 +144,16 @@ def _extract_audio_path(wav_entry: str) -> Optional[str]:
     if not entry.endswith("|") and " " not in entry:
         return entry
 
-    # sox pipe: "sox /path/file.sph -t wav - ..." or similar
     tokens = entry.split()
+    # Look for tool (sox/sph2pipe/ffmpeg) followed immediately by an absolute path.
+    # Must check path-like next token to avoid returning flags like "-R".
     for i, tok in enumerate(tokens):
-        if tok in ("sox", "ffmpeg", "soxi"):
+        if tok in ("sox", "sph2pipe", "ffmpeg", "soxi"):
             if i + 1 < len(tokens):
-                return tokens[i + 1]
-    # Fallback: return the first token that looks like a path
+                nxt = tokens[i + 1]
+                if nxt.startswith("/") or nxt.startswith("./"):
+                    return nxt
+    # Fallback: first token that looks like an absolute/relative path
     for tok in tokens:
         if tok.startswith("/") or tok.startswith("./"):
             return tok
@@ -343,8 +347,8 @@ def main():
     parser.add_argument("--splits",     nargs="+", default=["train", "valid", "test"])
     parser.add_argument("--context-s",  type=float, default=4.0,
                         help="Audio context window length in seconds (default 4.0)")
-    parser.add_argument("--stride-s",   type=float, default=2.0,
-                        help="Window stride during training data creation (default 2.0)")
+    parser.add_argument("--stride-s",   type=float, default=0.04,
+                        help="Window stride during training data creation (default 0.04)")
     parser.add_argument("--include-quality-meta", action="store_true",
                         help="Also write quality metrics to metric2id/metric2type "
                              "(needed for joint quality+TT training config)")

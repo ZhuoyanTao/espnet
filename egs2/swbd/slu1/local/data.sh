@@ -44,7 +44,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     log " Data Preparation for turn taking"
     local/swbd1_data_download.sh ${swbd1_dir}
     gdown 1Wc0DmEs0htZI22Z5U7oQQclueho7EApX
-    unzip turn_take_splits.zip
+    unzip -o turn_take_splits.zip
     local/swbd1_prepare_dict.sh
     local/swbd1_data_prep.sh ${swbd1_dir}
     sed -i.bak -e "s/$/ sox -R -t wav - -t wav - rate 16000 dither | /" data/train/wav.scp
@@ -82,6 +82,9 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     for f in text wav.scp utt2spk; do
         sort data/test/${f} -o data/test/${f}
     done
+    # BC_1/BC_2 are not filtered from the test CSV (unlike train/valid which go
+    # through subsample_2channel_switchboard_mono.py); remap them to BC here.
+    sed -i 's/BC_1/BC/g; s/BC_2/BC/g' data/test/text
     utils/utt2spk_to_spk2utt.pl data/test/utt2spk > "data/test/spk2utt"
     utils/validate_data_dir.sh --no-feats data/test || exit 1
 fi

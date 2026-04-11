@@ -17,12 +17,8 @@ def get_label(start_chunk, end_chunk, label_arr, arr_count):
     label = False
     if arr_count < len(label_arr):
         if start_chunk >= label_arr[arr_count][1]:
-            if start_chunk == min_start:
-                arr_count += 1
-                return get_label(start_chunk, end_chunk, label_arr, arr_count)
-            else:
-                print("error")
-                sys.exit(1)
+            arr_count += 1
+            return get_label(start_chunk, end_chunk, label_arr, arr_count)
         elif end_chunk >= label_arr[arr_count][1]:
             arr_count += 1
             return get_label(start_chunk, end_chunk, label_arr, arr_count)
@@ -127,7 +123,8 @@ for x in dir_dict:
     writer = csv.DictWriter(csvfile, fieldnames=field_names)
     duration_dict = get_duration()
     writer.writeheader()
-    for line in open("turn_take_splits/" + x + ".txt"):
+    split_file = "turn_take_splits/train_clean.txt" if x == "train" else "turn_take_splits/" + x + ".txt"
+    for line in open(split_file):
         file_id = line.strip()
         print("----ok1---")
         print(file_id)

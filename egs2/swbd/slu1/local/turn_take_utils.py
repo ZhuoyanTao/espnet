@@ -126,8 +126,7 @@ def clean_dialogue(word_file_A, word_file_B, sentence_dict_sort):
                 continue
             while float(word_file_A[count_A][2]) <= sentence_dict_sort[k][1]:
                 if word_file_A[count_A][0] != sentence_dict_sort[k][2]:
-                    print("error")
-                    sys.exit(1)
+                    break
                 if k not in sentence_dict_sort_clean:
                     sentence_dict_sort_clean[k] = sentence_dict_sort[k] + [
                         float(word_file_A[count_A][1]),
@@ -150,8 +149,7 @@ def clean_dialogue(word_file_A, word_file_B, sentence_dict_sort):
                 continue
             while float(word_file_B[count_B][2]) <= sentence_dict_sort[k][1]:
                 if word_file_B[count_B][0] != sentence_dict_sort[k][2]:
-                    print("error")
-                    sys.exit(1)
+                    break
                 if k not in sentence_dict_sort_clean:
                     sentence_dict_sort_clean[k] = sentence_dict_sort[k] + [
                         float(word_file_B[count_B][1]),
