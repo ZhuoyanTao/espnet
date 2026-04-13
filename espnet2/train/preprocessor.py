@@ -2921,7 +2921,7 @@ class UniversaProcessor(AbsPreprocessor):
 
                     ma = np.max(np.abs(audio))
                     if ma > 1.0:
-                        audio /= ma
+                        audio = audio / ma
                     data[name] = audio
 
                 if self.train and self.min_sample_size > 0:

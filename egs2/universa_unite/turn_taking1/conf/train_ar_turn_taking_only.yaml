@@ -44,8 +44,9 @@ universa_conf:
   lsm_weight: 0.1
   sym_sos: "<sos>"
   sym_eos: "<eos>"
-  use_ref_audio: false
-  use_ref_text: false
+# Task-level flags (must be top-level, not inside universa_conf)
+use_ref_audio: true
+use_ref_text: false
 
 # Causal WavLM-Large frontend
 frontend: causal_s3prl
@@ -61,12 +62,13 @@ freeze_param:
 sequential_metric: true
 tokenize_numerical_metric: true
 randomize_sequential_metric: false  # only one metric, no randomization needed
+defer_full_meta: true
 
 # Separate token list with ONLY turn-taking tokens
 metric_token_info: data/token_list/turn_taking_only_tokens/tokens.json
 
 max_epoch: 50
-batch_type: sorted
+batch_type: unsorted
 batch_size: 8
 grad_clip: 5.0
 grad_noise: false
@@ -90,6 +92,9 @@ optim_conf:
 scheduler: warmuplr
 scheduler_conf:
   warmup_steps: 10000
+
+init_param:
+  - /work/nvme/bbjs/ttao3/espnet/egs2/universa_unite/uni_versa1/exp/universa_universa_ar_overall_base_token_wavlm_large/valid.loss.best.prefix_65828.pth
 
 ignore_init_mismatch: true
 cudnn_deterministic: false

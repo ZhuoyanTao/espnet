@@ -52,9 +52,9 @@ universa_conf:
   sym_sos: "<sos>"
   sym_eos: "<eos>"
 
-  # No reference audio/text: single-channel mixed speech only
-  use_ref_audio: false
-  use_ref_text: false
+# Task-level flags (must be top-level, not inside universa_conf)
+use_ref_audio: true
+use_ref_text: false
 
 # ------------------------------------------------------------------
 # Frontend: Causal WavLM-Large
@@ -77,6 +77,7 @@ freeze_param:
 sequential_metric: true
 tokenize_numerical_metric: true
 randomize_sequential_metric: true
+defer_full_meta: true
 
 metric_token_info: data/token_list/turn_taking_tokens/tokens.json
 
@@ -84,7 +85,7 @@ metric_token_info: data/token_list/turn_taking_tokens/tokens.json
 # Training parameters
 # ------------------------------------------------------------------
 max_epoch: 50
-batch_type: sorted
+batch_type: unsorted
 batch_size: 8
 grad_clip: 5.0
 grad_noise: false
