@@ -249,6 +249,7 @@ if [ "${stage}" -le 4 ] && [ "${stop_stage}" -ge 4 ]; then
                     --metric2type ${_metric2type} \
                     --use_ref_audio true \
                     --use_ref_text false \
+                    --grad_clip 5.0 \
                     --train_shape_file data/train/audio_shape \
                     --valid_shape_file data/valid/audio_shape \
                     --train_data_path_and_name_and_type 'data/train/wav.scp,audio,kaldi_ark' \

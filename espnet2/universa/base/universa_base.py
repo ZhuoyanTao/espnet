@@ -412,7 +412,7 @@ class UniversaBase(AbsUniversa):
             stats["loss"] = loss.detach()
 
         # force_gatherable: to-device and to-tensor if scalar for DataParallel
-        loss, stats, weight = force_gatherable((-loss, stats, batch_size), loss.device)
+        loss, stats, weight = force_gatherable((loss, stats, batch_size), loss.device)
         return loss, stats, weight
 
     @typechecked

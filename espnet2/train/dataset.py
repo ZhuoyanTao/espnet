@@ -240,8 +240,11 @@ def kaldi_loader(
     path, float_dtype=None, max_cache_fd: int = 0, allow_multi_rates=False
 ):
     loader = kaldiio.load_scp(path, max_cache_fd=max_cache_fd)
+    # Default to float32 so that int16 PCM audio from kaldiio is converted to
+    # float before reaching ESPnetDataset's dtype normalisation, which would
+    # otherwise cast it to int64 (Long) and break downstream ops like LayerNorm.
     return AdapterForSoundScpReader(
-        loader, float_dtype, allow_multi_rates=allow_multi_rates
+        loader, float_dtype or "float32", allow_multi_rates=allow_multi_rates
     )
 
 
@@ -665,13 +668,13 @@ class ESPnetDataset(AbsDataset):
                     if isinstance(v, np.ndarray):
                         if v.dtype.kind == "f":
                             value[k] = v.astype(self.float_dtype)
-                        elif v.dtype.kind == "i":
+                        elif v.dtype.kind in ("i", "u"):
                             value[k] = v.astype(self.int_dtype)
                         else:
                             raise NotImplementedError(f"Not supported dtype: {v.dtype}")
             elif value.dtype.kind == "f":
                 value = value.astype(self.float_dtype)
-            elif value.dtype.kind == "i":
+            elif value.dtype.kind in ("i", "u"):
                 value = value.astype(self.int_dtype)
             else:
                 raise NotImplementedError(f"Not supported dtype: {value.dtype}")
