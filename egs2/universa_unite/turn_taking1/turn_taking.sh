@@ -256,6 +256,7 @@ if [ "${stage}" -le 4 ] && [ "${stop_stage}" -ge 4 ]; then
                     --train_data_path_and_name_and_type 'data/train/metric.scp,metrics,metric' \
                     --valid_data_path_and_name_and_type 'data/valid/wav.scp,audio,kaldi_ark' \
                     --valid_data_path_and_name_and_type 'data/valid/metric.scp,metrics,metric' \
+                    --resume true \
                     --output_dir ${WD}/${_expdir}
             " | grep -oP '(?<=Submitted batch job )\d+')
         echo "${_jobid}" > "${_expdir}/.submitted"
