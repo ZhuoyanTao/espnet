@@ -15,7 +15,9 @@ decode_config=conf/decode.yaml
 expdir=exp/rst_w2v_bert2
 # Vocoder (stages 6-8). Stage 7 pretrains on ground-truth features, stage 8
 # finetunes on the stage-5 predictor's features. The config's vocoder_type
-# picks the DAC decoder (default) or ESPnet's HiFi-GAN generator.
+# picks the model and with it the objective: dac (default) and hifigan train
+# adversarially, cfm and periodwave by conditional flow matching; the same
+# rst_vocoder_train command serves all four (conf/tuning/train_rst_vocoder_*).
 voc_pretrain_config=conf/tuning/train_rst_vocoder_dac_pretrain.yaml
 voc_finetune_config=conf/tuning/train_rst_vocoder_dac_finetune.yaml
 voc_pretrain_exp=exp/rst_vocoder_dac_pretrain
@@ -42,6 +44,18 @@ ref_wav_scp=
 . utils/parse_options.sh
 
 log() { echo "[$(date '+%Y-%m-%dT%H:%M:%S')] $*"; }
+
+# The vocoder_type of a config (or of an experiment's config.yaml) also fixes
+# which checkpoint the later stages pick up: the GAN types are selected by the
+# validation mel loss, the flow-matching types by the flow-matching loss, and
+# only the GAN types have a discriminator to initialise in stage 8.
+vocoder_type_of() { awk '$1 == "vocoder_type:" {print $2}' "$1"; }
+vocoder_best_of() {
+    case "$(vocoder_type_of "$1")" in
+        cfm|periodwave) echo valid.loss.best.pth ;;
+        *) echo valid.loss_mel.best.pth ;;
+    esac
+}
 
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
@@ -115,12 +129,17 @@ fi
 
 if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
     log "Stage 8: finetune vocoder on predicted SSL features"
-    vocoder_init=${vocoder_init:-${voc_pretrain_exp}/valid.loss_mel.best.pth}
-    discriminator_init=${discriminator_init-${vocoder_init}}
+    vocoder_init=${vocoder_init:-${voc_pretrain_exp}/$(vocoder_best_of "${voc_pretrain_config}")}
     init_opts=(--init_param "${vocoder_init}:vocoder:vocoder")
-    if [ -n "${discriminator_init}" ]; then
-        init_opts+=(--init_param "${discriminator_init}:discriminator:discriminator")
-    fi
+    case "$(vocoder_type_of "${voc_finetune_config}")" in
+        cfm|periodwave) ;;  # no discriminator
+        *)
+            discriminator_init=${discriminator_init-${vocoder_init}}
+            if [ -n "${discriminator_init}" ]; then
+                init_opts+=(--init_param "${discriminator_init}:discriminator:discriminator")
+            fi
+            ;;
+    esac
     # Same utterances as stage 7, so its shape files are reused.
     ${cuda_cmd} --gpu ${ngpu} ${voc_finetune_exp}/train.log \
         ${python} -m espnet2.bin.rst_vocoder_train \
@@ -140,7 +159,7 @@ if [ ${stage} -le 9 ] && [ ${stop_stage} -ge 9 ]; then
         vocoder_opts=(--external_vocoder "${external_vocoder}")
     else
         vocoder_exp=${vocoder_exp:-${voc_finetune_exp}}
-        vocoder_model_file=${vocoder_model_file:-${vocoder_exp}/valid.loss_mel.best.pth}
+        vocoder_model_file=${vocoder_model_file:-${vocoder_exp}/$(vocoder_best_of "${vocoder_exp}/config.yaml")}
         for required_file in "${vocoder_exp}/config.yaml" "${vocoder_model_file}"; do
             [ -f "${required_file}" ] || {
                 log "Missing vocoder file ${required_file}: train one (stages 6-8) or set --external_vocoder"

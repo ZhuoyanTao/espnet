@@ -83,13 +83,39 @@ sub-discriminators as in DAC). The encoder is frozen in both stages; the
 generator and discriminators run on a 1 s excerpt whose features were computed
 with 8 s of context (`segment_duration`, `context_duration`).
 
-Two vocoders share the stage-7/8 data path and the inference loader; the
+Four vocoders share the stage-7/8 data path and the inference loader; the
 config's `vocoder_type` selects one and `vocoder_conf` configures it.
 
-| `vocoder_type` | Model | Training | Config (stage 7) |
+| `vocoder_type` | Model | Objective | Configs (stage 7 / 8) |
 |---|---|---|---|
-| `dac` (default) | DAC decoder as in the official release, 52.4M | GAN, `rst_vocoder_train` | `train_rst_vocoder_dac_pretrain.yaml` |
-| `hifigan` | ESPnet `HiFiGANGenerator`, 512 channels, 17M | GAN, `rst_vocoder_train` | `train_rst_vocoder_hifigan_pretrain.yaml` |
+| `dac` (default) | DAC decoder as in the official release, 52.4M | GAN, two optimizers | `train_rst_vocoder_dac_{pretrain,finetune}.yaml` |
+| `hifigan` | ESPnet `HiFiGANGenerator`, 512 channels, 17M | GAN, two optimizers | `train_rst_vocoder_hifigan_{pretrain,finetune}.yaml` |
+| `cfm` | WaveNet velocity field (`espnet2.gan_tts.wavenet`) behind a DAC-style 960x conditioner, 5M | conditional flow matching, one optimizer | `train_rst_vocoder_cfm_{pretrain,finetune}.yaml` |
+| `periodwave` | PeriodWave (Lee et al., ICLR 2025): multi-period vector-field estimator over periods 1-7 with a ConvNeXt-V2 conditioner, 34.8M | conditional flow matching, one optimizer | `train_rst_vocoder_periodwave_{pretrain,finetune}.yaml` |
+
+One command trains all four: `rst_vocoder_train` reads `vocoder_type` and runs
+the GAN types with `GANTrainer` (`RestorationVocoderTask`) and the flow types
+with the plain `Trainer` (`RestorationFlowVocoderTask`, same arguments, in
+`espnet2/tasks/rst_vocoder.py`). `run.sh` reads the same key to pick the
+checkpoint stage 8 starts from and stage 9 decodes with
+(`valid.loss_mel.best.pth` for the GAN types, `valid.loss.best.pth` for the
+flow types) and to skip the discriminator initialisation.
+
+The flow-matching vocoders train without a discriminator on straight
+noise-to-waveform paths (velocity regression, `sigma_min` 1e-4) and synthesise
+with a midpoint ODE solver in `num_steps` steps (16 by default, two velocity
+evaluations per step; `--vocoder_num_steps` at inference overrides it). `cfm`
+is our own WaveNet velocity field. `periodwave` is the published comparison,
+the model of https://github.com/sh-lee-prml/PeriodWave (MIT, Copyright (c)
+2024 Sang-Hoon Lee) vendored into `espnet2/rst/decoder/periodwave_vocoder.py`,
+whose header names every upstream file it derives from and carries the
+licence. Its EnCodec variant is the one vendored: that variant conditions on a
+latent sequence rather than a mel spectrogram and drops PriorGrad's energy
+prior, which cannot be computed from predicted features at inference time. The
+one adaptation is resolution: the folded U-Net takes conditioning at a 64th of
+the sample rate, so 50 Hz features against 48 kHz must be lifted by 15, done as
+5 then 3 (`cond_rates`). Its loss keeps PeriodWave's own source-noise scale
+(`noise_scale` 0.25), so its absolute values are not comparable with `cfm`.
 
 All models in this recipe are trained from scratch (the SSL backbone is the
 public w2v-BERT 2.0; the LoRA adapter, the vocoder and its discriminator start
@@ -99,6 +125,49 @@ be run through the same inference and scoring path for comparison:
 `local/convert_official_sidon.py` and `local/convert_official_sidon_vocoder.py`
 convert the released adapter and the released TorchScript vocoder into
 checkpoints that stage 9 loads like a trained one.
+
+### Results
+
+Reference-free and reference-based scores of the from-scratch pipeline (stage-5
+w2v-BERT 2.0 predictor at epoch 30 in every row) on 120 clips: the 20
+LibriTTS-R test-clean utterances of the DialogueSidon evaluation set under six
+conditions (clean, band-limit to 3.6 kHz, clipping, MP3 at 16 kb/s,
+reverberation with T60 0.3 s and 1.5 s), scored with VERSA (stage 11) at
+48 kHz: UTMOS, DNSMOS, speaker similarity to the clean reference, PESQ and
+STOI against the clean reference, and whisper large-v3 word error rate. Means
+over the six conditions. Every checkpoint is the last one of its run, not the
+loss-selected one (see the note below).
+
+| vocoder | stage | epochs | UTMOS | DNSMOS | SpkSim | PESQ | STOI | WER |
+|---|---|---|---|---|---|---|---|---|
+| released Sidon decoder on our predictor | - | - | 4.09 | 3.42 | 0.69 | 2.46 | 0.90 | 3.0 % |
+| `dac` | 7 | 80 | 3.72 | 3.23 | 0.67 | 2.15 | 0.89 | 3.3 % |
+| `dac` | 8 | 48 | 3.71 | 3.19 | 0.67 | 2.12 | 0.88 | 3.0 % |
+| `hifigan` | 7 | 38 | 3.57 | 3.22 | 0.64 | 1.95 | 0.88 | 3.3 % |
+| `hifigan` | 8 | 13 | 3.42 | 3.08 | 0.63 | 1.95 | 0.87 | 3.3 % |
+| `periodwave` | 7 | 38 | 2.80 | 2.86 | 0.45 | 1.62 | 0.80 | 3.7 % |
+| `periodwave` | 8 | 12 | 2.01 | 2.58 | 0.41 | 1.41 | 0.76 | 4.8 % |
+
+Budgets: `dac` stage 7 ran 80 epochs on 1-4 A40s (about 1-2 GPU-hours per
+epoch), `hifigan` 38 epochs at 1 GPU-hour per epoch, `periodwave` 38 epochs at
+about 1.6 GPU-hours per epoch (roughly 120k optimizer steps, an order of
+magnitude below the published PeriodWave recipe, and its scores were still
+rising at the last checkpoint: UTMOS 2.28 at epoch 14, 2.47 at 18, 2.56 at 27,
+2.80 at 38). The `cfm` vocoder was trained for two epochs only and is not
+listed.
+
+Two things to know before reading the table:
+
+- Stage 8 selects checkpoints by `valid.loss_mel.best.pth`, but that loss is
+  measured against the clean target while the input features are predicted
+  from degraded speech, so it jumps at the first finetuning epoch and never
+  recovers; the loss-best pin is epoch 1. Pick stage-8 checkpoints by stage 11
+  scores, as above. At these budgets stage 8 is not ahead of stage 7 on UTMOS
+  or DNSMOS for any vocoder; for the GAN vocoders it trades a little of both
+  for PESQ and WER, and for `periodwave` it is behind on every metric after 12
+  epochs.
+- Sampler steps are not the flow vocoders' bottleneck: `periodwave` at epoch
+  18 scored UTMOS 2.47 with 16 steps, 2.54 with 32 and 2.51 with 64.
 
 ## Configs
 

@@ -1,0 +1,87 @@
+# ESPnet restoration vocoder, stage 8 with PeriodWave: finetune the stage-7
+# PeriodWave on the stage-5 predictor's features of degraded speech (run.sh
+# passes --fp_model_path and --init_param).
+#
+# The stage-5 feature predictor (LoRA, loaded by --fp_model_path) encodes the
+# online-degraded 16 kHz input; PeriodWave's vector field learns to transport
+# noise to the clean 48 kHz reference from those features. Same deltas from
+# the pretrain config as train_rst_vocoder_cfm_finetune.yaml: predicted
+# features + online degradation, lr 2e-4 -> 5e-5, warmup 4000 -> 1000,
+# max_epoch 100 -> 40.
+# Data must be 48 kHz (data/train_voc, data/dev_voc: EARS + VCTK).
+ssl_encoder: w2v_bert2
+ssl_encoder_conf:
+    model_tag: facebook/w2v-bert-2.0
+    freeze_base: true
+lora_rank: 64
+lora_alpha: 16
+lora_dropout: 0.1
+input_sr: 16000
+output_sr: 48000
+
+use_predicted_feat: true
+noise_dir: data/noise_pool
+rir_dir: data/rir_pool
+degrade_prob: 0.5
+online_degradation: true
+# Encoder context per utterance and the aligned excerpt the network trains on
+# (features computed with 8 s in view, velocity loss on 1 s at 48 kHz).
+context_duration: 8.0
+segment_duration: 1.0
+
+# PeriodWave at the upstream geometry: hidden 512, final 32 (= hidden // 16,
+# which the U-Net's last skip connection requires), periods [1,2,3,5,7], one
+# U-Net pass per period. 34.8M parameters, of which 24.9M is the conditioner.
+#
+# cond_rates replaces upstream's single transposed convolution: their mel
+# variant lifts hop-256 frames by 4 and their EnCodec variant lifts hop-320
+# latents by 5, both landing on T/64, where the folded U-Net takes its
+# conditioning. Our features are 50 Hz against 48 kHz, a hop of 960, so the
+# lift is 960/64 = 15, done as 5 then 3.
+#
+# noise_scale is the source-noise standard deviation (upstream: 0.25 at 22 kHz,
+# 0.5 at 24 kHz); data_scale multiplies the waveform (RMS ~0.03) up towards it,
+# as in the cfm config. num_steps/solver are the inference-time ODE settings.
+vocoder_type: periodwave
+vocoder_conf:
+    periods: [1, 2, 3, 5, 7]
+    hidden_dim: 512
+    final_dim: 32
+    cond_rates: [5, 3]
+    noise_scale: 0.25
+    num_steps: 16
+    solver: midpoint
+    data_scale: 10.0
+sigma_min: 1.0e-4
+
+optim: adamw
+optim_conf:
+    lr: 5.0e-5
+    betas: [0.9, 0.98]
+    weight_decay: 0.01
+scheduler: warmuplr
+scheduler_conf:
+    warmup_steps: 1000
+
+max_epoch: 40
+batch_type: unsorted
+# Matches the cfm config so the two flow vocoders see the same number of
+# seconds per optimizer step: 8 x 1 s per forward, accum_grad 2, so 16 per
+# update either way. batch_size is the total across GPUs in ESPnet's
+# DataParallel mode (distributed is off here), so the cfm run's 1 GPU and this
+# run's 2 both put 8 examples through each forward, 4 per device here.
+batch_size: 8
+valid_batch_size: 8
+accum_grad: 2
+grad_clip: 1.0
+num_workers: 8
+seed: 42
+# The flow-matching loss is a proper objective: lower is better throughout.
+best_model_criterion:
+    -   - valid
+        - loss
+        - min
+keep_nbest_models: 3
+log_interval: 50
+use_amp: false
+num_att_plot: 0
