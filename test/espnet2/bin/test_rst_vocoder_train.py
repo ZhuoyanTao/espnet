@@ -15,7 +15,7 @@ def test_vocoder_type_choices():
     args = parser.parse_args(["--vocoder_type", "hifigan", "--output_dir", "x"])
     assert args.vocoder_type == "hifigan"
     args = parser.parse_args(["--vocoder_type", "periodwave", "--output_dir", "x"])
-    assert args.vocoder_type == "periodwave" and args.sigma_min == 1e-4
+    assert args.vocoder_type == "periodwave"
     with pytest.raises(SystemExit):
         parser.parse_args(["--vocoder_type", "unknown", "--output_dir", "x"])
 
@@ -34,13 +34,22 @@ def test_select_task_from_command_line(vocoder_type, task):
 
 
 def test_select_task_from_config(tmp_path):
+    # The selection must not validate the rest of the config: a GAN config
+    # carries optim2, which the flow task's parser does not know, and a flow
+    # config carries sigma_min, which the GAN task's parser does not know.
     config = tmp_path / "train.yaml"
     config.write_text("vocoder_type: cfm\nsigma_min: 0.001\n")
     assert select_task(["--config", str(config)]) is RestorationFlowVocoderTask
-    config.write_text("vocoder_type: dac\n")
+    config.write_text("vocoder_type: hifigan\noptim2: adamw\n")
     assert select_task(["--config", str(config)]) is RestorationVocoderTask
-    # default without a type is the GAN task
+    config.write_text("optim2: adamw\n")  # no type: the default, dac
+    assert select_task(["--config", str(config)]) is RestorationVocoderTask
+    # the command line wins over the config
+    config.write_text("vocoder_type: dac\n")
+    task = select_task(["--config", str(config), "--vocoder_type", "periodwave"])
+    assert task is RestorationFlowVocoderTask
     assert select_task(["--output_dir", "x"]) is RestorationVocoderTask
+    assert select_task(["--config", "missing.yaml"]) is RestorationVocoderTask
 
 
 def test_main():
