@@ -11,13 +11,19 @@ from torch import nn
 from espnet2.gan_codec.shared.discriminator.msmpmb_discriminator import (
     MultiScaleMultiPeriodMultiBandDiscriminator,
 )
-from espnet2.rst.decoder.dac_vocoder import VOCODERS, build_vocoder
+from espnet2.rst.decoder.dac_vocoder import (
+    FLOW_VOCODER_TYPES,
+    VOCODERS,
+    build_vocoder,
+)
+from espnet2.rst.rst_flow_vocoder_model import ESPnetRestorationFlowVocoderModel
 from espnet2.rst.rst_model import SSL_ENCODERS, build_ssl_encoder
 from espnet2.rst.rst_vocoder_model import SSL_FRAME_RATE, ESPnetRestorationVocoderModel
 from espnet2.tasks.abs_task import AbsTask, optim_classes
 from espnet2.tasks.rst import _audio_files, degrade_waveform
 from espnet2.train.collate_fn import CommonCollateFn
 from espnet2.train.gan_trainer import GANTrainer
+from espnet2.train.trainer import Trainer
 from espnet2.utils.nested_dict_action import NestedDictAction
 from espnet2.utils.types import str2bool, str_or_none
 
@@ -122,6 +128,14 @@ class RestorationVocoderCollateFn:
 
 
 class RestorationVocoderTask(AbsTask):
+    """Adversarial vocoder training (``vocoder_type`` dac or hifigan).
+
+    ``rst_vocoder_train`` dispatches on ``vocoder_type``: the GAN types come
+    here, the flow-matching types (FLOW_VOCODER_TYPES) go to
+    RestorationFlowVocoderTask, which shares this task's arguments, data
+    pipeline and encoder handling.
+    """
+
     num_optimizers = 2
     trainer = GANTrainer
 
@@ -160,8 +174,10 @@ class RestorationVocoderTask(AbsTask):
             "--vocoder_type",
             choices=sorted(VOCODERS),
             default="dac",
-            help="dac: DAC decoder as in Sidon (default); "
-            "hifigan: ESPnet HiFi-GAN generator",
+            help="dac: DAC decoder as in Sidon (default); hifigan: ESPnet "
+            "HiFi-GAN generator (both adversarial); cfm: WaveNet velocity field; "
+            "periodwave: PeriodWave (both conditional flow matching, one "
+            "optimizer, no discriminator)",
         )
         group.add_argument("--vocoder_conf", action=NestedDictAction, default={})
         group.add_argument("--discriminator_conf", action=NestedDictAction, default={})
@@ -240,6 +256,12 @@ class RestorationVocoderTask(AbsTask):
 
     @classmethod
     def build_model(cls, args):
+        if args.vocoder_type in FLOW_VOCODER_TYPES:
+            raise ValueError(
+                f"vocoder_type {args.vocoder_type!r} trains by flow matching: use "
+                "RestorationFlowVocoderTask (rst_vocoder_train picks it from the "
+                "config)"
+            )
         encoder = build_ssl_encoder(
             args.ssl_encoder,
             args.ssl_encoder_conf,
@@ -306,3 +328,63 @@ class RestorationVocoderTask(AbsTask):
     @classmethod
     def get_trainer(cls):
         return GANTrainer
+
+
+class RestorationFlowVocoderTask(AbsTask):
+    """Flow-matching vocoder training (``vocoder_type`` cfm or periodwave).
+
+    The GAN task's arguments, collate function and encoder handling with one
+    optimizer and the plain Trainer: the model is
+    ESPnetRestorationFlowVocoderModel, whose loss is the conditional
+    flow-matching objective, so there is no discriminator and the best
+    checkpoint is ``valid.loss.best.pth`` rather than ``valid.loss_mel.best.pth``.
+    """
+
+    num_optimizers = 1
+    trainer = Trainer
+
+    @classmethod
+    def add_task_arguments(cls, parser):
+        RestorationVocoderTask.add_task_arguments(parser)
+        group = parser.add_argument_group("ESPnet restoration flow vocoder")
+        group.add_argument(
+            "--sigma_min",
+            type=float,
+            default=1e-4,
+            help="residual noise scale at t=1 of the flow-matching path",
+        )
+
+    build_collate_fn = RestorationVocoderTask.build_collate_fn
+    build_preprocess_fn = RestorationVocoderTask.build_preprocess_fn
+    required_data_names = RestorationVocoderTask.required_data_names
+    optional_data_names = RestorationVocoderTask.optional_data_names
+
+    @classmethod
+    def build_model(cls, args):
+        if args.vocoder_type not in FLOW_VOCODER_TYPES:
+            raise ValueError(
+                f"vocoder_type {args.vocoder_type!r} trains adversarially: use "
+                "RestorationVocoderTask (rst_vocoder_train picks it from the config)"
+            )
+        encoder = build_ssl_encoder(
+            args.ssl_encoder,
+            args.ssl_encoder_conf,
+            lora_rank=args.lora_rank,
+            lora_alpha=args.lora_alpha,
+            lora_dropout=args.lora_dropout,
+            input_sr=args.input_sr,
+        )
+        if args.fp_model_path:
+            RestorationVocoderTask._load_feature_predictor(encoder, args.fp_model_path)
+        elif args.use_predicted_feat:
+            raise ValueError("--use_predicted_feat true requires --fp_model_path")
+        vocoder = build_vocoder(args.vocoder_type, encoder.ssl_dim, args.vocoder_conf)
+        return ESPnetRestorationFlowVocoderModel(
+            ssl_encoder=encoder,
+            vocoder=vocoder,
+            use_predicted_feat=args.use_predicted_feat,
+            input_sr=args.input_sr,
+            output_sr=args.output_sr,
+            segment_duration=args.segment_duration,
+            sigma_min=args.sigma_min,
+        )

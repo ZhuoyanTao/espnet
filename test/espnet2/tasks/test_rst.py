@@ -17,6 +17,7 @@ from espnet2.tasks.rst import (
     degrade_waveform,
 )
 from espnet2.tasks.rst_vocoder import (
+    RestorationFlowVocoderTask,
     RestorationVocoderCollateFn,
     RestorationVocoderTask,
 )
@@ -45,6 +46,10 @@ def pools(tmp_path):
 def test_parsers():
     assert isinstance(RestorationTask.get_parser(), ArgumentParser)
     assert isinstance(RestorationVocoderTask.get_parser(), ArgumentParser)
+    flow_parser = RestorationFlowVocoderTask.get_parser()
+    assert isinstance(flow_parser, ArgumentParser)
+    args = flow_parser.parse_args(["--vocoder_type", "cfm", "--output_dir", "x"])
+    assert args.sigma_min == 1e-4
 
 
 def test_single_degradations(pools):

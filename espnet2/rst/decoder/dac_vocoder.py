@@ -297,8 +297,30 @@ class HiFiGANVocoder(nn.Module):
         self.generator.remove_weight_norm()
 
 
-# Both train adversarially in RestorationVocoderTask and share the inference path.
-VOCODERS = {"dac": DACVocoder, "hifigan": HiFiGANVocoder}
+def _flow_vocoder(**kwargs) -> nn.Module:
+    # imported here: flow_vocoder reuses DecoderBlock from this module
+    from espnet2.rst.decoder.flow_vocoder import FlowVocoder
+
+    return FlowVocoder(**kwargs)
+
+
+def _periodwave_vocoder(**kwargs) -> nn.Module:
+    from espnet2.rst.decoder.periodwave_vocoder import PeriodWaveVocoder
+
+    return PeriodWaveVocoder(**kwargs)
+
+
+# dac and hifigan train adversarially (RestorationVocoderTask); cfm, our own
+# WaveNet velocity field, and periodwave, the published PeriodWave, train by
+# conditional flow matching (RestorationFlowVocoderTask). All four share the
+# inference path: ``forward`` maps (B, D, T) features to (B, 1, T * 960).
+VOCODERS = {
+    "dac": DACVocoder,
+    "hifigan": HiFiGANVocoder,
+    "cfm": _flow_vocoder,
+    "periodwave": _periodwave_vocoder,
+}
+FLOW_VOCODER_TYPES = frozenset({"cfm", "periodwave"})
 
 
 def build_vocoder(

@@ -58,7 +58,7 @@ def test_hifigan_wrapper_shapes():
 
 
 def test_build_vocoder_registry():
-    assert set(VOCODERS) == {"dac", "hifigan"}
+    assert {"dac", "hifigan"} <= set(VOCODERS)  # flow types: test_flow_vocoder
     dac = build_vocoder("dac", 8, {"channels": 64, "rates": [2, 2]})
     assert isinstance(dac, DACVocoder)
     hifigan = build_vocoder(

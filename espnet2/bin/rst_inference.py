@@ -126,6 +126,13 @@ def get_parser():
         default=None,
         help="checkpoint of that vocoder, e.g. valid.loss_mel.best.pth",
     )
+    parser.add_argument(
+        "--vocoder_num_steps",
+        type=int,
+        default=None,
+        help="ODE steps for a flow-matching vocoder (cfm, periodwave); default: "
+        "the num_steps of its training config",
+    )
     parser.add_argument("--wav_scp", required=True)
     parser.add_argument("--output_dir", required=True)
     parser.add_argument("--device", default="cuda")
@@ -173,6 +180,14 @@ def _load_vocoder(args, input_dim, device):
         vocoder.remove_weight_norm()
     vocoder.load_state_dict(state, strict=True)
     vocoder.remove_weight_norm()
+    num_steps = getattr(args, "vocoder_num_steps", None)
+    if num_steps is not None:
+        if not hasattr(vocoder, "num_steps"):
+            raise ValueError(
+                "--vocoder_num_steps applies to flow-matching vocoders only, not "
+                f"to {config.get('vocoder_type', 'dac')!r}"
+            )
+        vocoder.num_steps = num_steps
     logger.info("loaded ESPnet-trained vocoder from %s", args.vocoder_model_file)
     return vocoder.eval().to(device)
 
