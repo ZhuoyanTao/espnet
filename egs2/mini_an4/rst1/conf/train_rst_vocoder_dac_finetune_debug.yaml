@@ -1,0 +1,89 @@
+# Debug config for CI: stage 8 (finetune on predicted features) with the DAC vocoder.
+ssl_encoder: w2v_bert2
+ssl_encoder_conf:
+    model_tag: downloads/tiny_w2v_bert2
+    target_layer: 1
+    freeze_base: true
+lora_rank: 2
+lora_alpha: 4
+lora_dropout: 0.1
+input_sr: 16000
+output_sr: 48000
+context_duration: 0.5
+segment_duration: 0.1
+
+use_predicted_feat: true
+noise_dir: data/noise_pool
+rir_dir: data/rir_pool
+degrade_prob: 0.5
+online_degradation: true
+
+# DAC decoder shrunk to 64 channels; the discriminator to two periods and
+# two bands; the mel loss to 32 bins.
+vocoder_type: dac
+vocoder_conf:
+    channels: 64
+    rates: [8, 5, 4, 3, 2]
+discriminator_conf:
+    rates: []
+    fft_sizes: [256]
+    periods: [2, 3]
+    period_discriminator_params:
+        in_channels: 1
+        out_channels: 1
+        kernel_sizes: [5, 3]
+        channels: 4
+        downsample_scales: [3, 3, 1]
+        max_downsample_channels: 8
+        bias: true
+        nonlinear_activation: LeakyReLU
+        nonlinear_activation_params:
+            negative_slope: 0.1
+        use_weight_norm: true
+        use_spectral_norm: false
+    band_discriminator_params:
+        hop_factor: 0.25
+        sample_rate: 48000
+        bands: [[0.0, 0.5], [0.5, 1.0]]
+        channel: 4
+mel_loss_conf:
+    fs: 48000
+    n_fft: 512
+    hop_length: 120
+    win_length: 512
+    n_mels: 32
+mel_loss_weight: 15.0
+adv_loss_weight: 2.0
+fm_loss_weight: 1.0
+
+optim: adamw
+optim_conf:
+    lr: 1.0e-4
+optim2: adamw
+optim2_conf:
+    lr: 1.0e-4
+scheduler: exponentiallr
+scheduler_conf:
+    gamma: 0.999996
+scheduler2: exponentiallr
+scheduler2_conf:
+    gamma: 0.999996
+generator_first: false
+
+max_epoch: 1
+num_iters_per_epoch: 1
+batch_type: unsorted
+batch_size: 2
+valid_batch_size: 2
+accum_grad: 1
+grad_clip: 1.0
+num_workers: 0
+seed: 42
+best_model_criterion:
+    -   - valid
+        - loss_mel
+        - min
+keep_nbest_models: 1
+log_interval: 1
+use_amp: false
+num_att_plot: 0

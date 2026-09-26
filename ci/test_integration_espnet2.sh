@@ -571,6 +571,26 @@ if [ "${task}" == "codec" ] || [ "${task}" == "all" ]; then
     cd "${cwd}"
 fi
 
+if [ "${task}" == "rst" ] || [ "${task}" == "all" ]; then
+    # [ESPnet2] test rst1 recipe: feature predictor + vocoder (restoration)
+    python3 -m pip install -e '.[rst]'
+    cd ./egs2/mini_an4/rst1
+    gen_dummy_coverage
+    echo "==== [ESPnet2] RST: predictor + DAC vocoder, stages 1-9 ==="
+    ./run.sh --stage 1 --stop_stage 9 --python "${python}"
+    echo "==== [ESPnet2] RST: flow-matching vocoder (cfm), stages 6-9 ==="
+    ./run.sh --stage 6 --stop_stage 9 --python "${python}" \
+        --voc_pretrain_config conf/train_rst_vocoder_cfm_pretrain_debug.yaml \
+        --voc_finetune_config conf/train_rst_vocoder_cfm_finetune_debug.yaml \
+        --voc_pretrain_exp exp/rst_vocoder_cfm_pretrain_debug \
+        --voc_finetune_exp exp/rst_vocoder_cfm_finetune_debug
+    echo "==== [ESPnet2] RST: pack, stage 13 ==="
+    ./run.sh --stage 13 --stop_stage 13 --skip_packing false --python "${python}"
+    # Remove generated files in order to reduce the disk usage
+    rm -rf exp dump data downloads
+    cd "${cwd}"
+fi
+
 echo "::group::=== report ==="
 if compgen -G "egs2/*/*/.coverage" > /dev/null; then
     coverage combine egs2/*/*/.coverage

@@ -1,0 +1,55 @@
+# Debug config for CI: stage 7 with the flow-matching (cfm) vocoder.
+ssl_encoder: w2v_bert2
+ssl_encoder_conf:
+    model_tag: downloads/tiny_w2v_bert2
+    target_layer: 1
+    freeze_base: true
+lora_rank: 2
+lora_alpha: 4
+lora_dropout: 0.1
+input_sr: 16000
+output_sr: 48000
+context_duration: 0.5
+segment_duration: 0.1
+
+use_predicted_feat: false
+
+# WaveNet velocity field shrunk to two layers and four channels, two ODE steps.
+vocoder_type: cfm
+vocoder_conf:
+    layers: 2
+    stacks: 1
+    residual_channels: 4
+    gate_channels: 8
+    skip_channels: 4
+    cond_channels: 4
+    cond_hidden: 16
+    time_channels: 8
+    num_steps: 2
+    data_scale: 10.0
+sigma_min: 1.0e-4
+
+optim: adamw
+optim_conf:
+    lr: 1.0e-4
+scheduler: warmuplr
+scheduler_conf:
+    warmup_steps: 1
+
+max_epoch: 1
+num_iters_per_epoch: 1
+batch_type: unsorted
+batch_size: 2
+valid_batch_size: 2
+accum_grad: 1
+grad_clip: 1.0
+num_workers: 0
+seed: 42
+best_model_criterion:
+    -   - valid
+        - loss
+        - min
+keep_nbest_models: 1
+log_interval: 1
+use_amp: false
+num_att_plot: 0
