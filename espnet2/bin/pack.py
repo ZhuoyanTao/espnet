@@ -86,6 +86,13 @@ class CodecPackedContents(PackedContents):
     yaml_files = ["train_config"]
 
 
+class RSTPackedContents(PackedContents):
+    # These names must be consistent with the arguments of rst_inference: the
+    # feature predictor (stage 5) and the vocoder (stage 7 or 8) travel together.
+    files = ["model_file", "vocoder_model_file"]
+    yaml_files = ["train_config", "vocoder_train_config"]
+
+
 def add_arguments(parser: argparse.ArgumentParser, contents: Type[PackedContents]):
     parser.add_argument("--outpath", type=str, required=True)
     for key in contents.yaml_files:
@@ -115,6 +122,7 @@ def get_parser() -> argparse.ArgumentParser:
         ("lid", LIDPackedContents),
         ("codec", CodecPackedContents),
         ("cls", ClassificationPackedContents),
+        ("rst", RSTPackedContents),
     ]:
         parser_asr = subparsers.add_parser(
             name,

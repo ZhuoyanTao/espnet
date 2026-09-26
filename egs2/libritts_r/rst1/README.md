@@ -11,8 +11,10 @@ an `EnhancementTask` model and does not go through the standard `enh.sh`
 driver. The feature predictor is trained by `espnet2.bin.rst_train`
 (`RestorationTask`), which scores predicted SSL features rather than
 waveforms, and the vocoder by `espnet2.bin.rst_vocoder_train`
-(`RestorationVocoderTask`); `run.sh` drives the 11 stages directly because
-the vocoder pretrain/finetune stages sit in the middle of the pipeline.
+(`RestorationVocoderTask` / `RestorationFlowVocoderTask`). The shared driver
+is `egs2/TEMPLATE/rst1/rst.sh` (`run.sh` here sets this corpus's defaults and
+calls it); `egs2/mini_an4/rst1` runs the same driver as the CI integration
+test with a tiny stand-in encoder.
 
 Two SSL backbones are supported (`ssl_encoder` in the config), both 1024-d at
 50 Hz so the vocoder stages are identical:
@@ -22,7 +24,7 @@ Two SSL backbones are supported (`ssl_encoder` in the config), both 1024-d at
 | `w2v_bert2` (default, paper) | w2v-BERT 2.0 | 8 | `facebook/w2v-bert-2.0` | MIT |
 | `xeus` | XEUS (ESPnet E-Branchformer SSL, [Chen et al. 2024](https://arxiv.org/abs/2407.00837)) | block 10 | `espnet/xeus`, loaded with `SSLTask.build_model_from_file` | **CC-BY-NC-SA-4.0** (non-commercial) |
 
-Select XEUS with `--config conf/tuning/train_rst_xeus.yaml` for stage 5 and
+Select XEUS with `--train_config conf/tuning/train_rst_xeus.yaml` for stage 5 and
 pass the same `ssl_encoder` / `ssl_encoder_conf` to the vocoder configs (stages
 7-8); inference reads the encoder type from the training config.
 
@@ -64,13 +66,21 @@ Set the paths in `db.sh`. `DATASET_LIBRITTS_R` and `LIBRITTS` are mandatory;
 | 9 | Inference with the stage-8 vocoder, or an externally released one (`--external_vocoder`, e.g. the Sidon v0.1 decoder) |
 | 10 | Paper's four metrics: DNSMOS, NISQA, SpkSim, WER (`local/score.py`, dependency-light) |
 | 11 | VERSA scoring, reference-free and reference-based (recommended: same metrics plus UTMOS, SQUIM, PESQ, STOI, SDR/SI-SNR and more in one pass) |
+| 12 | Collect the stage-11 averages into `RESULTS.md` (`scripts/utils/show_rst_result.py`) |
+| 13 | Pack the predictor and the vocoder (`espnet2.bin.pack rst`; `--skip_packing false`) |
+| 14 | Upload the packed model to Hugging Face (`--skip_upload_hf false --hf_repo user/name`) |
 
 ```bash
 ./run.sh --stage 1 --stop_stage 8 --ngpu 4 --nj 64     # predictor + vocoder
-./run.sh --stage 9 --stop_stage 11                      # uses exp/rst_vocoder_dac_finetune
+./run.sh --stage 9 --stop_stage 12                      # uses exp/rst_vocoder_dac_finetune
 # or skip vocoder training and use the official decoder
-./run.sh --stage 9 --stop_stage 11 --external_vocoder /path/to/decoder_cuda.pt
+./run.sh --stage 9 --stop_stage 12 --external_vocoder /path/to/decoder_cuda.pt
+./run.sh --stage 13 --stop_stage 14 --skip_packing false --skip_upload_hf false --hf_repo user/name
 ```
+
+Stage 3 simulates the RIR pool once (`pyscripts/utils/prepare_rir_pool.py`,
+`--rir_pool_size`); `--train_args`, `--voc_args` and `--inference_args` pass
+extra options to the three entry points.
 
 ## Vocoder
 
@@ -197,8 +207,9 @@ paper alone, and each file says so in its header:
   band-limit sampling rates, quantile clipping bounds U(0, 0.1) / U(0.9, 1.0)
   and MP3 `qscale` 1-10. Differences: packet loss follows the paper (9 %,
   20-200 ms segments); reverberation uses a pre-generated RIR pool
-  (`local/prepare_rir_pool.py`) instead of on-the-fly simulation;
-- the room-impulse-response simulation recipe in `local/prepare_rir_pool.py`
+  (`pyscripts/utils/prepare_rir_pool.py`) instead of on-the-fly simulation;
+- the room-impulse-response simulation recipe in
+  `pyscripts/utils/prepare_rir_pool.py`
   (`functional_degrations.py: convolve_rir_pra`);
 - the LoRA adapter configuration (rank 64, alpha 16, dropout 0.1,
   `bias="lora_only"`, target `output_dense`) and the frozen-teacher /
@@ -217,11 +228,17 @@ loaded into it. `local/convert_official_sidon*.py` only rename keys of the
 released weights (`sarulab-speech/sidon_raw_weight`, `sarulab-speech/sidon-v0.1`,
 MIT).
 
+The `periodwave` vocoder is a further derived part: `espnet2/rst/decoder/periodwave_vocoder.py`
+vendors the model of https://github.com/sh-lee-prml/PeriodWave (Copyright (c)
+2024 Sang-Hoon Lee, MIT License); its header names the upstream files and the
+three adaptations, and the licence is reproduced there in full.
+
 MIT License text applying to the derived parts above:
 
 ```
 Copyright (c) 2025 sarulab-speech
 Copyright (c) 2023-present Descript, Inc.
+Copyright (c) 2024 Sang-Hoon Lee
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
