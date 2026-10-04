@@ -4,7 +4,12 @@ from inspect import signature
 import pytest
 
 from espnet2.bin.cls_inference import Classification
-from espnet2.bin.pack import ClassificationPackedContents, get_parser, main
+from espnet2.bin.pack import (
+    ClassificationPackedContents,
+    RSTPackedContents,
+    get_parser,
+    main,
+)
 
 
 def test_get_parser():
@@ -23,3 +28,10 @@ def test_cls_packing():
         assert filename in valid_args, f"{filename} not in {valid_args}"
     for yaml_filename in packing_obj.yaml_files:
         assert yaml_filename in valid_args, f"{yaml_filename} not in {valid_args}"
+
+
+def test_rst_packing():
+    rst_inference = pytest.importorskip("espnet2.bin.rst_inference")
+    options = {action.dest for action in rst_inference.get_parser()._actions}
+    for name in RSTPackedContents.files + RSTPackedContents.yaml_files:
+        assert name in options, f"{name} not in {options}"
