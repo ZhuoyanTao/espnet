@@ -16,6 +16,10 @@ stop_stage=11
 ngpu=4
 nj=64
 python=python3
+skip_data_prep=false # Skip data preparation stages (1-3).
+skip_train=false     # Skip training stages (3-8).
+skip_eval=false      # Skip inference and scoring stages (9-11).
+skip_stages=         # Stages to skip, e.g., "3 10".
 # Feature-predictor training config. Not "config": utils/parse_options.sh
 # sources a file passed as --config as shell.
 fp_config=conf/train.yaml
@@ -59,6 +63,10 @@ Options:
     --ngpu        # The number of GPUs for training (default="${ngpu}").
     --nj          # The number of parallel jobs (default="${nj}").
     --python      # Specify python to execute espnet commands (default="${python}").
+    --skip_data_prep # Skip data preparation stages (1-3) (default="${skip_data_prep}").
+    --skip_train     # Skip training stages (3-8) (default="${skip_train}").
+    --skip_eval      # Skip inference and scoring stages (9-11) (default="${skip_eval}").
+    --skip_stages    # Stages to skip, e.g., "3 10" (default="${skip_stages}").
 
     # Data preparation (stages 1-3)
     --test_sets   # Names of test sets (default="${test_sets}").
@@ -101,13 +109,26 @@ if [ $# -ne 0 ]; then
     exit 2
 fi
 
+# Stage 3's room impulse responses serve training only.
+if "${skip_data_prep}"; then
+    skip_stages+=" 1 2 3"
+fi
+if "${skip_train}"; then
+    skip_stages+=" 3 4 5 6 7 8"
+fi
+if "${skip_eval}"; then
+    skip_stages+=" 9 10 11"
+fi
+skip_stages=$(echo "${skip_stages}" | tr ' ' '\n' | sort -nu | tr '\n' ' ')
+log "Skipped stages: ${skip_stages}"
 
-if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
+
+if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ] && ! [[ " ${skip_stages} " =~ [[:space:]]1[[:space:]] ]]; then
     log "Stage 1: data preparation"
     local/data.sh
 fi
 
-if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
+if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ] && ! [[ " ${skip_stages} " =~ [[:space:]]2[[:space:]] ]]; then
     log "Stage 2: resample feature-predictor data to 16 kHz"
     for split in train dev; do
         scripts/audio/format_wav_scp.sh \
@@ -121,13 +142,13 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     done
 fi
 
-if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
+if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ] && ! [[ " ${skip_stages} " =~ [[:space:]]3[[:space:]] ]]; then
     log "Stage 3: generate RIR pool"
     ${python} local/prepare_rir_pool.py \
         --out_dir data/rir_pool --n_rirs ${n_rirs} --nj ${nj}
 fi
 
-if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
+if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ] && ! [[ " ${skip_stages} " =~ [[:space:]]4[[:space:]] ]]; then
     log "Stage 4: collect feature-predictor statistics"
     ${python} -m espnet2.bin.rst_train \
         --config ${fp_config} \
@@ -136,7 +157,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         --output_dir ${expdir} --collect_stats true --ngpu 0
 fi
 
-if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
+if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ] && ! [[ " ${skip_stages} " =~ [[:space:]]5[[:space:]] ]]; then
     log "Stage 5: train feature predictor"
     ${cuda_cmd} --gpu ${ngpu} ${expdir}/train.log \
         ${python} -m espnet2.bin.rst_train \
@@ -149,7 +170,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
         --multiprocessing_distributed true --unused_parameters true --resume true
 fi
 
-if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
+if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ] && ! [[ " ${skip_stages} " =~ [[:space:]]6[[:space:]] ]]; then
     log "Stage 6: collect vocoder statistics"
     ${python} -m espnet2.bin.rst_vocoder_train \
         --config ${voc_pretrain_config} \
@@ -158,7 +179,7 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
         --output_dir ${voc_pretrain_exp} --collect_stats true --ngpu 0
 fi
 
-if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
+if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ] && ! [[ " ${skip_stages} " =~ [[:space:]]7[[:space:]] ]]; then
     log "Stage 7: pretrain vocoder on ground-truth SSL features"
     ${cuda_cmd} --gpu ${ngpu} ${voc_pretrain_exp}/train.log \
         ${python} -m espnet2.bin.rst_vocoder_train \
@@ -171,7 +192,7 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
         --multiprocessing_distributed true --unused_parameters true --resume true
 fi
 
-if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
+if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ] && ! [[ " ${skip_stages} " =~ [[:space:]]8[[:space:]] ]]; then
     log "Stage 8: finetune vocoder on predicted SSL features"
     vocoder_init=${vocoder_init:-${voc_pretrain_exp}/valid.loss_mel.best.pth}
     discriminator_init=${discriminator_init-${vocoder_init}}
@@ -193,7 +214,7 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
         --multiprocessing_distributed true --unused_parameters true --resume true
 fi
 
-if [ ${stage} -le 9 ] && [ ${stop_stage} -ge 9 ]; then
+if [ ${stage} -le 9 ] && [ ${stop_stage} -ge 9 ] && ! [[ " ${skip_stages} " =~ [[:space:]]9[[:space:]] ]]; then
     if [ -n "${external_vocoder}" ]; then
         vocoder_opts=(--external_vocoder "${external_vocoder}")
     else
@@ -220,7 +241,7 @@ if [ ${stage} -le 9 ] && [ ${stop_stage} -ge 9 ]; then
     done
 fi
 
-if [ ${stage} -le 10 ] && [ ${stop_stage} -ge 10 ]; then
+if [ ${stage} -le 10 ] && [ ${stop_stage} -ge 10 ] && ! [[ " ${skip_stages} " =~ [[:space:]]10[[:space:]] ]]; then
     for test_set in ${test_sets}; do
         # The paper's four metrics without VERSA; stage 11 (VERSA) covers them
         # and more, so this stage can be skipped when VERSA is installed.
@@ -240,7 +261,7 @@ if [ ${stage} -le 10 ] && [ ${stop_stage} -ge 10 ]; then
     cat "${expdir}"/RESULTS.md
 fi
 
-if [ ${stage} -le 11 ] && [ ${stop_stage} -ge 11 ]; then
+if [ ${stage} -le 11 ] && [ ${stop_stage} -ge 11 ] && ! [[ " ${skip_stages} " =~ [[:space:]]11[[:space:]] ]]; then
     ${python} -c "import versa" || {
         log "VERSA is required for stage 11; run tools/installers/install_versa.sh"
         exit 1
