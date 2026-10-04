@@ -182,6 +182,8 @@ if [ ${stage} -le 10 ] && [ ${stop_stage} -ge 10 ]; then
             "${text_opt[@]}" \
             --output_dir ${expdir}/score_${test_set}
     done
+    ${python} pyscripts/utils/show_rst_result.py "${expdir}" > "${expdir}"/RESULTS.md
+    cat "${expdir}"/RESULTS.md
 fi
 
 if [ ${stage} -le 11 ] && [ ${stop_stage} -ge 11 ]; then
@@ -245,4 +247,6 @@ if [ ${stage} -le 11 ] && [ ${stop_stage} -ge 11 ]; then
             log "Skipping reference-based VERSA metrics"
         fi
     done
+    ${python} pyscripts/utils/show_rst_result.py "${expdir}" > "${expdir}"/RESULTS.md
+    cat "${expdir}"/RESULTS.md
 fi
