@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+log() {
+    local fname=${BASH_SOURCE[1]##*/}
+    echo -e "$(date '+%Y-%m-%dT%H:%M:%S') (${fname}:${BASH_LINENO[0]}:${FUNCNAME[1]}) $*"
+}
+SECONDS=0
+
 . ./path.sh
 . ./cmd.sh
 . ./db.sh
@@ -43,9 +49,57 @@ versa_ref_config=conf/versa_enh_ref_based.yaml
 # {test_set} is replaced per evaluation set.
 ref_wav_scp=
 
+help_message=$(cat << EOF
+Usage: $0 [options]
+
+Options:
+    # General configuration
+    --stage       # Processes starts from the specified stage (default="${stage}").
+    --stop_stage  # Processes is stopped at the specified stage (default="${stop_stage}").
+    --ngpu        # The number of GPUs for training (default="${ngpu}").
+    --nj          # The number of parallel jobs (default="${nj}").
+    --python      # Specify python to execute espnet commands (default="${python}").
+
+    # Data preparation (stages 1-3)
+    --test_sets   # Names of test sets (default="${test_sets}").
+    --n_rirs      # Number of simulated room impulse responses (default="${n_rirs}").
+
+    # Feature predictor (stages 4-5)
+    --fp_config   # Training config of the feature predictor (default="${fp_config}").
+    --expdir      # Directory of the feature-predictor experiment (default="${expdir}").
+
+    # Vocoder (stages 6-8)
+    --voc_pretrain_config # Vocoder pretraining config (default="${voc_pretrain_config}").
+    --voc_finetune_config # Vocoder finetuning config (default="${voc_finetune_config}").
+    --voc_pretrain_exp    # Vocoder pretraining directory (default="${voc_pretrain_exp}").
+    --voc_finetune_exp    # Vocoder finetuning directory (default="${voc_finetune_exp}").
+    --vocoder_init        # Generator initialisation for stage 8
+                          # (default: the stage-7 best checkpoint).
+    --discriminator_init  # Discriminator initialisation for stage 8
+                          # (default: same as --vocoder_init).
+
+    # Inference and scoring (stages 9-11)
+    --decode_config      # Inference config (default="${decode_config}").
+    --vocoder_exp        # Vocoder used at inference (default: --voc_finetune_exp).
+    --vocoder_model_file # Its checkpoint (default: <vocoder_exp>/valid.loss_mel.best.pth).
+    --external_vocoder   # A released TorchScript vocoder instead, for comparison
+                         # (default="${external_vocoder}").
+    --versa_config       # VERSA config for stage 11 (default="${versa_config}").
+    --versa_ref_config   # VERSA config of the reference-based metrics
+                         # (default="${versa_ref_config}").
+    --ref_wav_scp        # Clean reference wav.scp of synthetically degraded inputs;
+                         # {test_set} is replaced per test set (default="${ref_wav_scp}").
+EOF
+)
+
+log "$0 $*"
 . utils/parse_options.sh
 
-log() { echo "[$(date '+%Y-%m-%dT%H:%M:%S')] $*"; }
+if [ $# -ne 0 ]; then
+    log "${help_message}"
+    log "Error: No positional arguments are required."
+    exit 2
+fi
 
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
@@ -250,3 +304,5 @@ if [ ${stage} -le 11 ] && [ ${stop_stage} -ge 11 ]; then
     ${python} pyscripts/utils/show_rst_result.py "${expdir}" > "${expdir}"/RESULTS.md
     cat "${expdir}"/RESULTS.md
 fi
+
+log "Successfully finished. [elapsed=${SECONDS}s]"
