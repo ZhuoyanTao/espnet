@@ -48,6 +48,9 @@ vocoder_model_file=
 external_vocoder=
 # Feature-predictor checkpoint used at inference (stage 9) and packed (12).
 inference_model=valid.loss.best.pth
+# A packed model (a Hugging Face repository or a local .zip from stage 12) to
+# use for stages 9-11 instead of this recipe's own predictor and vocoder.
+download_model=
 test_sets="test-clean test-other"
 # Stage 3: number of simulated room impulse responses in data/rir_pool.
 n_rirs=50000
@@ -104,6 +107,8 @@ Options:
                          # (default="${external_vocoder}").
     --inference_model    # Feature-predictor checkpoint for inference and packing
                          # (default="${inference_model}").
+    --download_model     # Packed model (Hugging Face repository or local .zip) to
+                         # use for stages 9-11 (default="${download_model}").
     --versa_config       # VERSA config for stage 11 (default="${versa_config}").
     --versa_ref_config   # VERSA config of the reference-based metrics
                          # (default="${versa_ref_config}").
@@ -234,6 +239,32 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ] && ! [[ " ${skip_stages} " =~ [
         --valid_shape_file ${voc_pretrain_exp}/valid/speech_ref1_shape \
         --output_dir ${voc_finetune_exp} --ngpu ${ngpu} \
         --multiprocessing_distributed true --unused_parameters true --resume true
+fi
+
+if [ -n "${download_model}" ]; then
+    log "Use ${download_model} for inference and evaluation"
+    expdir="${expdir%/*}/${download_model}"
+    mkdir -p "${expdir}"
+
+    # If the model already exists, you can skip downloading
+    espnet_model_zoo_download --unpack true "${download_model}" > "${expdir}/config.txt"
+
+    # Get the path of each file
+    _model_file=$(<"${expdir}/config.txt" sed -e "s/.*'model_file': '\([^']*\)'.*$/\1/")
+    _train_config=$(<"${expdir}/config.txt" sed -e "s/.*'train_config': '\([^']*\)'.*$/\1/")
+    _vocoder_model_file=$(<"${expdir}/config.txt" sed -e "s/.*'vocoder_model_file': '\([^']*\)'.*$/\1/")
+    _vocoder_train_config=$(<"${expdir}/config.txt" sed -e "s/.*'vocoder_train_config': '\([^']*\)'.*$/\1/")
+
+    # Create symbolic links; both configs are named config.yaml, so the
+    # vocoder's go into a subdirectory.
+    ln -sf "${_model_file}" "${expdir}"
+    ln -sf "${_train_config}" "${expdir}"
+    inference_model=$(basename "${_model_file}")
+    vocoder_exp="${expdir}/vocoder"
+    mkdir -p "${vocoder_exp}"
+    ln -sf "${_vocoder_model_file}" "${vocoder_exp}"
+    ln -sf "${_vocoder_train_config}" "${vocoder_exp}"
+    vocoder_model_file="${vocoder_exp}/$(basename "${_vocoder_model_file}")"
 fi
 
 if [ ${stage} -le 9 ] && [ ${stop_stage} -ge 9 ] && ! [[ " ${skip_stages} " =~ [[:space:]]9[[:space:]] ]]; then
