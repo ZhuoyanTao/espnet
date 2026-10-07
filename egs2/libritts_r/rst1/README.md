@@ -11,7 +11,7 @@ an `EnhancementTask` model and does not go through the standard `enh.sh`
 driver. The feature predictor is trained by `espnet2.bin.rst_train`
 (`RestorationTask`), which scores predicted SSL features rather than
 waveforms, and the vocoder by `espnet2.bin.rst_vocoder_train`
-(`RestorationVocoderTask`). The 11 stages are in `egs2/TEMPLATE/rst1/rst.sh`,
+(`RestorationVocoderTask`). The 13 stages are in `egs2/TEMPLATE/rst1/rst.sh`,
 which `egs2/mini_an4/rst1` (the CI test) also runs; `run.sh` passes this
 recipe's configs to it.
 
@@ -65,12 +65,19 @@ the 48 kHz material); `WHAM_NOISE` fills the noise pool for online degradation.
 | 9 | Inference with the stage-8 vocoder, or an externally released one (`--external_vocoder`, e.g. the Sidon v0.1 decoder) |
 | 10 | Paper's four metrics: DNSMOS, NISQA, SpkSim, WER (`local/score.py`, dependency-light) |
 | 11 | VERSA scoring, reference-free and reference-based (recommended: same metrics plus UTMOS, SQUIM, PESQ, STOI, SDR/SI-SNR and more in one pass) |
+| 12 | Pack the predictor and the stage-8 vocoder (its vocoder weights only) with `RESULTS.md` (`--skip_packing false`) |
+| 13 | Upload the pack to Hugging Face (`--skip_upload_hf false --hf_repo <user>/<name>`) |
+
+Stages 10 and 11 each summarise their scores in `exp/<expdir>/RESULTS.md`.
 
 ```bash
 ./run.sh --stage 1 --stop_stage 8 --ngpu 4 --nj 64     # predictor + vocoder
 ./run.sh --stage 9 --stop_stage 11                      # uses exp/rst_vocoder_dac_finetune
 # or skip vocoder training and use the official decoder
 ./run.sh --stage 9 --stop_stage 11 --external_vocoder /path/to/decoder_cuda.pt
+# pack and upload a trained model, or evaluate a packed one
+./run.sh --stage 12 --stop_stage 13 --skip_packing false --skip_upload_hf false --hf_repo <user>/<name>
+./run.sh --stage 9 --stop_stage 11 --download_model <user>/<name>
 ```
 
 The LoRA adapter is only needed for training. When a trained predictor is loaded
