@@ -12,13 +12,15 @@ SECONDS=0
 . ./db.sh
 
 stage=1
-stop_stage=11
+stop_stage=13
 ngpu=4
 nj=64
 python=python3
 skip_data_prep=false # Skip data preparation stages (1-3).
 skip_train=false     # Skip training stages (3-8).
 skip_eval=false      # Skip inference and scoring stages (9-11).
+skip_packing=true    # Skip the packing stage (12).
+skip_upload_hf=true  # Skip uploading to Hugging Face (13).
 skip_stages=         # Stages to skip, e.g., "3 10".
 # Feature-predictor training config. Not "config": utils/parse_options.sh
 # sources a file passed as --config as shell.
@@ -44,6 +46,8 @@ discriminator_init=
 vocoder_exp=
 vocoder_model_file=
 external_vocoder=
+# Feature-predictor checkpoint used at inference (stage 9) and packed (12).
+inference_model=valid.loss.best.pth
 test_sets="test-clean test-other"
 # Stage 3: number of simulated room impulse responses in data/rir_pool.
 n_rirs=50000
@@ -52,6 +56,10 @@ versa_ref_config=conf/versa_enh_ref_based.yaml
 # Optional clean reference for synthetically degraded inputs.  The placeholder
 # {test_set} is replaced per evaluation set.
 ref_wav_scp=
+# Stage 13: Hugging Face repository (<user>/<name>) and the corpus language
+# for its model card.
+hf_repo=
+lang=noinfo
 
 help_message=$(cat << EOF
 Usage: $0 [options]
@@ -66,6 +74,8 @@ Options:
     --skip_data_prep # Skip data preparation stages (1-3) (default="${skip_data_prep}").
     --skip_train     # Skip training stages (3-8) (default="${skip_train}").
     --skip_eval      # Skip inference and scoring stages (9-11) (default="${skip_eval}").
+    --skip_packing   # Skip the packing stage (12) (default="${skip_packing}").
+    --skip_upload_hf # Skip uploading to Hugging Face (13) (default="${skip_upload_hf}").
     --skip_stages    # Stages to skip, e.g., "3 10" (default="${skip_stages}").
 
     # Data preparation (stages 1-3)
@@ -92,11 +102,17 @@ Options:
     --vocoder_model_file # Its checkpoint (default: <vocoder_exp>/valid.loss_mel.best.pth).
     --external_vocoder   # A released TorchScript vocoder instead, for comparison
                          # (default="${external_vocoder}").
+    --inference_model    # Feature-predictor checkpoint for inference and packing
+                         # (default="${inference_model}").
     --versa_config       # VERSA config for stage 11 (default="${versa_config}").
     --versa_ref_config   # VERSA config of the reference-based metrics
                          # (default="${versa_ref_config}").
     --ref_wav_scp        # Clean reference wav.scp of synthetically degraded inputs;
                          # {test_set} is replaced per test set (default="${ref_wav_scp}").
+
+    # Packing and uploading (stages 12-13)
+    --hf_repo   # Hugging Face repository to upload to, e.g. <user>/<name> (default="${hf_repo}").
+    --lang      # Language of the corpus, for the model card (default="${lang}").
 EOF
 )
 
@@ -118,6 +134,12 @@ if "${skip_train}"; then
 fi
 if "${skip_eval}"; then
     skip_stages+=" 9 10 11"
+fi
+if "${skip_packing}"; then
+    skip_stages+=" 12"
+fi
+if "${skip_upload_hf}"; then
+    skip_stages+=" 13"
 fi
 skip_stages=$(echo "${skip_stages}" | tr ' ' '\n' | sort -nu | tr '\n' ' ')
 log "Skipped stages: ${skip_stages}"
@@ -234,7 +256,7 @@ if [ ${stage} -le 9 ] && [ ${stop_stage} -ge 9 ] && ! [[ " ${skip_stages} " =~ [
         ${python} -m espnet2.bin.rst_inference \
             --config ${decode_config} \
             --train_config ${expdir}/config.yaml \
-            --model_file ${expdir}/valid.loss.best.pth \
+            --model_file ${expdir}/${inference_model} \
             "${vocoder_opts[@]}" \
             --wav_scp data/${test_set}_16k/wav.scp \
             --output_dir ${expdir}/inference_${test_set}
@@ -324,6 +346,87 @@ if [ ${stage} -le 11 ] && [ ${stop_stage} -ge 11 ] && ! [[ " ${skip_stages} " =~
     done
     ${python} pyscripts/utils/show_rst_result.py "${expdir}" > "${expdir}"/RESULTS.md
     cat "${expdir}"/RESULTS.md
+fi
+
+packed_model="${expdir}/${expdir##*/}_${inference_model%.*}.zip"
+if [ ${stage} -le 12 ] && [ ${stop_stage} -ge 12 ] && ! [[ " ${skip_stages} " =~ [[:space:]]12[[:space:]] ]]; then
+    log "Stage 12: Pack model: ${packed_model}"
+    if [ -n "${external_vocoder}" ]; then
+        log "Error: an --external_vocoder cannot be packed; pack a vocoder trained by stages 6-8"
+        exit 1
+    fi
+    vocoder_exp=${vocoder_exp:-${voc_finetune_exp}}
+    vocoder_model_file=${vocoder_model_file:-${vocoder_exp}/valid.loss_mel.best.pth}
+    # The vocoder checkpoint also holds the SSL encoder and the discriminator,
+    # which only training uses; pack just the vocoder weights.
+    packed_vocoder=${vocoder_exp}/$(basename "${vocoder_model_file}" .pth).vocoder_only.pth
+    ${python} pyscripts/utils/extract_rst_vocoder.py "${vocoder_model_file}" "${packed_vocoder}"
+    _opts=()
+    for f in "${expdir}/RESULTS.md" "${expdir}/images"; do
+        if [ -e "${f}" ]; then
+            _opts+=(--option "${f}")
+        fi
+    done
+    ${python} -m espnet2.bin.pack rst \
+        --train_config "${expdir}/config.yaml" \
+        --model_file "${expdir}/${inference_model}" \
+        --vocoder_train_config "${vocoder_exp}/config.yaml" \
+        --vocoder_model_file "${packed_vocoder}" \
+        "${_opts[@]}" \
+        --outpath "${packed_model}"
+fi
+
+if [ ${stage} -le 13 ] && [ ${stop_stage} -ge 13 ] && ! [[ " ${skip_stages} " =~ [[:space:]]13[[:space:]] ]]; then
+    [ -z "${hf_repo}" ] && \
+        log "ERROR: You need to setup the variable hf_repo with the name of the repository located at HuggingFace, follow the following steps described here https://github.com/espnet/espnet/blob/master/CONTRIBUTING.md#133-publishing-models" && \
+    exit 1
+    log "Stage 13: Upload model to HuggingFace: ${hf_repo}"
+
+    if [ ! -f "${packed_model}" ]; then
+        log "ERROR: ${packed_model} does not exist. Please run stage 12 first."
+        exit 1
+    fi
+
+    gitlfs=$(git lfs --version 2> /dev/null || true)
+    [ -z "${gitlfs}" ] && \
+        log "ERROR: You need to install git-lfs first" && \
+        exit 1
+
+    dir_repo=${expdir}/hf_${hf_repo//"/"/"_"}
+    [ ! -d "${dir_repo}" ] && git clone https://huggingface.co/${hf_repo} ${dir_repo}
+
+    if command -v git &> /dev/null; then
+        _creator_name="$(git config user.name)"
+        _checkout="git checkout $(git show -s --format=%H)"
+    else
+        _creator_name="$(whoami)"
+        _checkout=""
+    fi
+    # /some/where/espnet/egs2/foo/rst1/ -> foo/rst1
+    _task="$(pwd | rev | cut -d/ -f2 | rev)"
+    # foo/rst1 -> foo
+    _corpus="${_task%/*}"
+    _model_name="${_creator_name}/${_corpus}_$(basename ${packed_model} .zip)"
+
+    # copy files in ${dir_repo}
+    unzip -o ${packed_model} -d ${dir_repo}
+    # Generate description file
+    # shellcheck disable=SC2034
+    hf_task=audio-to-audio
+    # shellcheck disable=SC2034
+    espnet_task=RST
+    # shellcheck disable=SC2034
+    task_exp=${expdir}
+    eval "echo \"$(cat scripts/utils/TEMPLATE_HF_Readme.md)\"" > "${dir_repo}"/README.md
+
+    this_folder=${PWD}
+    cd ${dir_repo}
+    if [ -n "$(git status --porcelain)" ]; then
+        git add .
+        git commit -m "Update model"
+    fi
+    git push
+    cd ${this_folder}
 fi
 
 log "Successfully finished. [elapsed=${SECONDS}s]"
