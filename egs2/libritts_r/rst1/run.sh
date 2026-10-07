@@ -7,12 +7,12 @@ set -o pipefail
 
 # Stages and their options: egs2/TEMPLATE/rst1/rst.sh. Options given to this
 # script override the ones below, e.g.
-#   ./run.sh --fp_config conf/tuning/train_rst_xeus.yaml --expdir exp/rst_xeus
+#   ./run.sh --train_config conf/tuning/train_rst_xeus.yaml --expdir exp/rst_xeus
 ./rst.sh \
     --ngpu 4 \
     --nj 64 \
-    --fp_config conf/train.yaml \
-    --decode_config conf/decode.yaml \
+    --train_config conf/train.yaml \
+    --inference_config conf/decode.yaml \
     --expdir exp/rst_w2v_bert2 \
     --voc_pretrain_config conf/tuning/train_rst_vocoder_dac_pretrain.yaml \
     --voc_finetune_config conf/tuning/train_rst_vocoder_dac_finetune.yaml \

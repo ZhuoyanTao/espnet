@@ -22,10 +22,8 @@ skip_eval=false      # Skip inference and scoring stages (9-11).
 skip_packing=true    # Skip the packing stage (12).
 skip_upload_hf=true  # Skip uploading to Hugging Face (13).
 skip_stages=         # Stages to skip, e.g., "3 10".
-# Feature-predictor training config. Not "config": utils/parse_options.sh
-# sources a file passed as --config as shell.
-fp_config=conf/train.yaml
-decode_config=conf/decode.yaml
+train_config=conf/train.yaml      # Feature-predictor training config (stages 4-5).
+inference_config=conf/decode.yaml # Inference config (stage 9).
 expdir=exp/rst_w2v_bert2
 # Vocoder (stages 6-8). Stage 7 pretrains on ground-truth features, stage 8
 # finetunes on the stage-5 predictor's features. The config's vocoder_type
@@ -86,7 +84,7 @@ Options:
     --n_rirs      # Number of simulated room impulse responses (default="${n_rirs}").
 
     # Feature predictor (stages 4-5)
-    --fp_config   # Training config of the feature predictor (default="${fp_config}").
+    --train_config # Training config of the feature predictor (default="${train_config}").
     --expdir      # Directory of the feature-predictor experiment (default="${expdir}").
 
     # Vocoder (stages 6-8)
@@ -100,7 +98,7 @@ Options:
                           # (default: same as --vocoder_init).
 
     # Inference and scoring (stages 9-11)
-    --decode_config      # Inference config (default="${decode_config}").
+    --inference_config   # Inference config (default="${inference_config}").
     --vocoder_exp        # Vocoder used at inference (default: --voc_finetune_exp).
     --vocoder_model_file # Its checkpoint (default: <vocoder_exp>/valid.loss_mel.best.pth).
     --external_vocoder   # A released TorchScript vocoder instead, for comparison
@@ -178,7 +176,7 @@ fi
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ] && ! [[ " ${skip_stages} " =~ [[:space:]]4[[:space:]] ]]; then
     log "Stage 4: collect feature-predictor statistics"
     ${python} -m espnet2.bin.rst_train \
-        --config ${fp_config} \
+        --config ${train_config} \
         --train_data_path_and_name_and_type data/train_fp_16k/wav.scp,speech_ref1,sound \
         --valid_data_path_and_name_and_type data/dev_fp_16k/wav.scp,speech_ref1,sound \
         --output_dir ${expdir} --collect_stats true --ngpu 0
@@ -188,7 +186,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ] && ! [[ " ${skip_stages} " =~ [
     log "Stage 5: train feature predictor"
     ${cuda_cmd} --gpu ${ngpu} ${expdir}/train.log \
         ${python} -m espnet2.bin.rst_train \
-        --config ${fp_config} \
+        --config ${train_config} \
         --train_data_path_and_name_and_type data/train_fp_16k/wav.scp,speech_ref1,sound \
         --valid_data_path_and_name_and_type data/dev_fp_16k/wav.scp,speech_ref1,sound \
         --train_shape_file ${expdir}/train/speech_ref1_shape \
@@ -285,7 +283,7 @@ if [ ${stage} -le 9 ] && [ ${stop_stage} -ge 9 ] && ! [[ " ${skip_stages} " =~ [
     for test_set in ${test_sets}; do
         log "Stage 9: inference (${test_set})"
         ${python} -m espnet2.bin.rst_inference \
-            --config ${decode_config} \
+            --config ${inference_config} \
             --train_config ${expdir}/config.yaml \
             --model_file ${expdir}/${inference_model} \
             "${vocoder_opts[@]}" \

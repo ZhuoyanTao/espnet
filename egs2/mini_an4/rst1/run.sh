@@ -12,8 +12,8 @@ set -o pipefail
     --ngpu 0 \
     --nj 2 \
     --n_rirs 4 \
-    --fp_config conf/train_rst_debug.yaml \
-    --decode_config conf/decode_debug.yaml \
+    --train_config conf/train_rst_debug.yaml \
+    --inference_config conf/decode_debug.yaml \
     --expdir exp/rst_debug \
     --voc_pretrain_config conf/train_rst_vocoder_pretrain_debug.yaml \
     --voc_finetune_config conf/train_rst_vocoder_finetune_debug.yaml \
