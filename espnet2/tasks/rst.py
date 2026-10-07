@@ -8,6 +8,7 @@
 # see egs2/libritts_r/rst1/README.md (Acknowledgements) for the differences.
 """Task definition for the ESPnet restoration feature predictor."""
 
+import io
 import logging
 import math
 import os
@@ -18,7 +19,6 @@ from typing import List, Tuple
 import soundfile as sf
 import torch
 import torch.nn.functional as F
-import torchaudio
 import torchaudio.functional as AF
 
 from espnet2.rst.rst_model import (
@@ -102,11 +102,25 @@ def _clip(wav: torch.Tensor) -> torch.Tensor:
 
 
 def _codec(wav: torch.Tensor, sr: int) -> torch.Tensor:
-    effect = torchaudio.io.AudioEffector(
-        format="mp3",
-        codec_config=torchaudio.io.CodecConfig(qscale=random.randint(1, 10)),
+    # MP3 at LAME VBR quality 1-10, Sidon's torchaudio qscale range. torchaudio
+    # 2.9 removed torchaudio.io, so this encodes with libsndfile (soundfile >=
+    # 0.12), whose VBR compression level c is LAME quality 10 c: at 16 kHz,
+    # level q / 10 gives the same bitrate and SNR as torchaudio's qscale q
+    # (level 1.0 is rejected, so q = 10 uses 0.999). The decoder drops the
+    # encoder delay, so the output stays sample-aligned with the input.
+    level = min(random.randint(1, 10) / 10, 0.999)
+    buffer = io.BytesIO()
+    sf.write(
+        buffer,
+        wav.detach().cpu().float().numpy(),
+        sr,
+        format="MP3",
+        compression_level=level,
+        bitrate_mode="VARIABLE",
     )
-    output = effect.apply(wav[:, None], sr).squeeze(1)
+    buffer.seek(0)
+    decoded, _ = sf.read(buffer, dtype="float32")
+    output = torch.from_numpy(decoded).to(wav)
     return F.pad(output[: wav.numel()], (0, max(0, wav.numel() - output.numel())))
 
 
@@ -157,8 +171,9 @@ def degrade_waveform(
                 # A degradation that raises on every call silently removes
                 # itself from the training distribution, and at debug level
                 # nobody finds out. Two of the six were disabled this way:
-                # codec raises whenever torchaudio's FFmpeg extension is
-                # unavailable, and reverb was a no-op because the RIR pool
+                # codec raised whenever torchaudio's FFmpeg extension was
+                # unavailable (it now raises only without MP3 support in
+                # libsndfile), and reverb was a no-op because the RIR pool
                 # had been generated as unit impulses. Warn once per
                 # degradation per process -- loud enough to notice in a log,
                 # quiet enough not to flood it.

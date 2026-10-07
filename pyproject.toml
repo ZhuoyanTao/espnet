@@ -184,6 +184,7 @@ enh = [
 rst = [
   "peft",
   "pyroomacoustics",
+  "soundfile>=0.12.1",  # MP3 encoding for the codec degradation
   "transformers",  # the w2v-BERT 2.0 backbone
 ]
 

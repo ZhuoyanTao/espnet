@@ -11,6 +11,7 @@ from espnet2.tasks.rst import (
     RestorationTask,
     _band_limit,
     _clip,
+    _codec,
     _noise,
     _packet_loss,
     _reverb,
@@ -59,6 +60,7 @@ def test_single_degradations(pools):
         ("noise", lambda x: _noise(x, 16000, noise_files)),
         ("band_limit", lambda x: _band_limit(x, 16000)),
         ("clip", _clip),
+        ("codec", lambda x: _codec(x, 16000)),
         ("packet_loss", lambda x: _packet_loss(x, 16000)),
     ):
         changed = False
@@ -81,6 +83,28 @@ def test_reverb_keeps_alignment(pools):
     out = _reverb(impulse, 16000, _audio_files(rir_dir))
     # the RIR's leading delay is removed, so the direct path stays at 1000
     assert int(torch.argmax(out.abs())) == 1000
+
+
+def test_codec_keeps_alignment():
+    if "MP3" not in sf.available_formats():
+        pytest.skip("libsndfile without MP3 support")
+    rng = np.random.RandomState(0)
+    t = torch.arange(32000) / 16000
+    wav = 0.3 * torch.sin(2 * np.pi * 440 * t) + 0.05 * torch.from_numpy(
+        rng.randn(32000).astype(np.float32)
+    )
+    for seed in range(4):
+        random.seed(seed)
+        out = _codec(wav, 16000)
+        assert out.shape == wav.shape and out.dtype == wav.dtype
+        # lossy but close, and with no shift: the best lag is 0 samples
+        lags = range(-200, 201)
+        corr = [
+            float(torch.dot(out[200:-200], wav.roll(lag)[200:-200])) for lag in lags
+        ]
+        assert lags[int(np.argmax(corr))] == 0
+        snr = 10 * torch.log10(wav.pow(2).sum() / (wav - out).pow(2).sum())
+        assert 5.0 < float(snr) < 60.0
 
 
 def test_degrade_waveform_probability(pools):
