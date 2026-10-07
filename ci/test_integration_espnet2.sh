@@ -562,6 +562,10 @@ if [ "${task}" == "rst" ] || [ "${task}" == "all" ]; then
     gen_dummy_coverage
     echo "==== [ESPnet2] RST ==="
     ./run.sh --stage 1 --stop_stage 9 --python "${python}"
+    # Pack the trained model, then run inference from the pack
+    ./run.sh --stage 12 --stop_stage 12 --skip_packing false --python "${python}"
+    ./run.sh --stage 9 --stop_stage 9 --python "${python}" \
+        --download_model exp/rst_debug/rst_debug_valid.loss.best.zip
     # Remove generated files in order to reduce the disk usage
     rm -rf exp dump data downloads
     cd "${cwd}"
