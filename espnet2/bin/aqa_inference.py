@@ -42,11 +42,27 @@ class AqaInference:
         fixed_metric_name_order: str = "",
         metric_list: Optional[List[str]] = None,
         defer_full_meta: Optional[bool] = None,
+        readout: str = "greedy",
+        value_token_range: str = "trained",
+        silence_reference_sec: Optional[float] = None,
+        fs: int = 16000,
     ):
         """Initialize AqaInference class.
 
-        ``defer_full_meta`` decodes whole-clip ``<m>_full`` metrics after all
-        other metrics; None (default) follows the training config.
+        Args:
+            metric_list: Metrics to decode, e.g. including whole-clip
+                ``<metric>_full`` names (default: all model metrics).
+                ``fixed_metric_name_order`` takes precedence.
+            defer_full_meta: Decode whole-clip ``<m>_full`` metrics after all
+                other metrics; None (default) follows the training config.
+            readout: ``"greedy"`` or ``"expected"`` (E[X] of numerical
+                metrics from the ARECHO value posterior).
+            value_token_range: ARECHO value tokens searched and averaged:
+                ``"trained"`` or ``"legacy"`` (see ``ARUniversa.set_inference``).
+            silence_reference_sec: If set, feed an all-zero reference clip of
+                this length when no reference audio is given, like models
+                trained with a silent reference file on every row.
+            fs: Sampling rate of the input audio, used for the silence clip.
         """
 
         # setup model
@@ -66,6 +82,14 @@ class AqaInference:
         self.metric_tokenizer = getattr(self.preprocess_fn, "metric_tokenizer", None)
         if defer_full_meta is None:
             defer_full_meta = getattr(train_args, "defer_full_meta", False)
+        self.silence_reference_samples = None
+        if silence_reference_sec is not None:
+            if silence_reference_sec <= 0:
+                raise ValueError("silence_reference_sec must be positive")
+            self.silence_reference_samples = max(1, round(silence_reference_sec * fs))
+        sequential = getattr(self.universa, "sequential_metrics", False)
+        if (readout, value_token_range) != ("greedy", "trained") and not sequential:
+            raise ValueError("readout and value_token_range require an ARECHO model.")
         if getattr(self.universa, "sequential_metrics", False):
             metrics = metric_list or list(self.universa.metric2id)
             if fixed_metric_name_order:
@@ -77,6 +101,8 @@ class AqaInference:
                 save_token_seq,
                 use_fixed_order=use_fixed_order,
                 defer_full_meta=defer_full_meta,
+                readout=readout,
+                value_token_range=value_token_range,
             )
         logging.info(f"Frontend: {model.frontend}")
         logging.info(f"Universa: {model.universa}")
@@ -94,6 +120,14 @@ class AqaInference:
         **kwargs,
     ) -> Dict[str, Any]:
         """Run Universa inference."""
+
+        if (
+            ref_audio is None
+            and self.silence_reference_samples is not None
+            and self.model.use_ref_audio
+        ):
+            batch_size = 1 if np.ndim(audio) == 1 else len(audio)
+            ref_audio = torch.zeros(batch_size, self.silence_reference_samples)
 
         # check the input type
         if self.model.use_ref_audio and ref_audio is None:
@@ -190,6 +224,10 @@ def inference(
     use_fixed_order: bool = False,
     fixed_metric_name_order: str = "",
     defer_full_meta: Optional[bool] = None,
+    readout: str = "greedy",
+    value_token_range: str = "trained",
+    silence_reference_sec: Optional[float] = None,
+    fs: int = 16000,
 ):
     """Run inference."""
     # setup logger
@@ -229,6 +267,10 @@ def inference(
         use_fixed_order=use_fixed_order,
         fixed_metric_name_order=fixed_metric_name_order,
         defer_full_meta=defer_full_meta,
+        readout=readout,
+        value_token_range=value_token_range,
+        silence_reference_sec=silence_reference_sec,
+        fs=fs,
     )
 
     if (
@@ -308,6 +350,32 @@ def get_parser():
         default=None,
         help="Decode whole-clip '<metric>_full' metrics after all other metrics. "
         "Default: the training config's defer_full_meta",
+    )
+    parser.add_argument(
+        "--readout",
+        type=str,
+        default="greedy",
+        choices=["greedy", "expected"],
+        help="Report decoded values, or E[X] of the value posterior of each "
+        "numerical metric (ARECHO; categorical metrics stay greedy)",
+    )
+    parser.add_argument(
+        "--value_token_range",
+        type=str,
+        default="trained",
+        choices=["trained", "legacy"],
+        help="ARECHO value tokens searched and averaged: those training produces, "
+        "or every vocabulary value token after @0 as the original UniVERSA search",
+    )
+    parser.add_argument(
+        "--silence_reference_sec",
+        type=float,
+        default=None,
+        help="Without reference audio, feed an all-zero reference of this many "
+        "seconds instead of an empty reference slot",
+    )
+    parser.add_argument(
+        "--fs", type=int, default=16000, help="Sampling rate of the input audio"
     )
     parser.add_argument(
         "--ngpu",

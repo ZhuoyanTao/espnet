@@ -6,6 +6,7 @@ import torch
 
 from espnet2.aqa.ar_universa import ARUniversa
 from espnet2.aqa.ar_universa.data import ARMetricCollateFn, ARMetricProcessor
+from espnet2.legacy.nets.pytorch_backend.transformer.mask import subsequent_mask
 
 
 @pytest.fixture
@@ -398,3 +399,118 @@ def test_default_inference_setup(make_arecho):
     result = model.inference(torch.randn(1, 5, 8), torch.tensor([5]))
     assert "mos" in result and "language" in result
     assert "token_seq" not in result
+
+
+def _readouts(model, metrics, audio, lengths, **options):
+    """Decode once per readout with otherwise identical settings."""
+    results = {}
+    for readout in ("greedy", "expected"):
+        model.set_inference(1, metrics, False, True, readout=readout, **options)
+        results[readout] = model.inference(audio, lengths)
+    return results["greedy"], results["expected"]
+
+
+@pytest.mark.parametrize("preferred,expected", [(5, 0.0), (8, 2.0)])
+def test_expected_readout_of_one_hot_posterior_is_greedy(
+    make_arecho, preferred, expected
+):
+    """A one-hot value posterior gives E[X] equal to the greedy value."""
+    model = make_arecho().eval()
+    with torch.no_grad():
+        model.decoder.output_layer.weight.zero_()
+        model.decoder.output_layer.bias.zero_()
+        model.decoder.output_layer.bias[preferred] = 1000
+        model.decoder.output_layer.bias[12] = 1000  # language "eng"
+    audio, lengths = torch.randn(1, 5, 8), torch.tensor([5])
+    greedy, mean = _readouts(model, ["mos", "language"], audio, lengths)
+    assert greedy["token_seq"] == mean["token_seq"]
+    assert greedy["mos"] == mean["mos"] == [expected]
+    assert greedy["language"] == mean["language"] == ["eng"]
+
+
+def test_expected_readout_is_value_posterior_mean(make_arecho):
+    """E[X] averages token values; categories keep their decoded label."""
+    torch.manual_seed(0)
+    model = make_arecho().eval()
+    audio, lengths = torch.randn(1, 5, 8), torch.tensor([5])
+    greedy, mean = _readouts(model, ["mos", "language"], audio, lengths)
+    assert mean["language"] == greedy["language"]
+    assert isinstance(mean["language"][0], str)
+    # Recompute the value posterior incrementally from the decoded prefix.
+    tokens = mean["token_seq"][0]
+    position = tokens.index(4)  # mos label
+    prefix = torch.tensor([tokens[: position + 1]])
+    with torch.no_grad():
+        log_probs, _ = model.decoder.forward_one_step(
+            prefix, subsequent_mask(prefix.size(1)).unsqueeze(0), mean["encoded_feat"]
+        )
+    posterior = log_probs[0, 5:9].double().softmax(-1)
+    value = float(posterior @ torch.tensor([0.0, 0.0, 1.0, 2.0], dtype=torch.double))
+    assert mean["mos"][0] == pytest.approx(value, rel=1e-5)
+    assert 0.0 < mean["mos"][0] < 2.0 and mean["mos"] != greedy["mos"]
+
+    with torch.no_grad():
+        model.decoder.output_layer.weight.zero_()
+        model.decoder.output_layer.bias.zero_()
+        model.decoder.output_layer.bias[[6, 7]] = 50  # values 0.0 and 1.0
+    assert _readouts(model, ["mos"], audio, lengths)[1]["mos"][0] == pytest.approx(0.5)
+    with pytest.raises(ValueError, match="readout"):
+        model.set_inference(1, ["mos"], False, readout="mean")
+    with pytest.raises(ValueError, match="SOS"):
+        model.expected_metric_values(mean["encoded_feat"], lengths, tokens[1:])
+
+
+@pytest.mark.parametrize("fixed_order", [False, True])
+def test_expected_readout_of_requested_whole_clip_metrics(
+    make_arecho, full_token_info, fixed_order
+):
+    """A metric subset with ``_full`` names decodes them last and reads out E[X]."""
+    info = full_token_info
+    metrics = ["mos_full", "mos", "language_full", "language"]
+    model = make_arecho(
+        metric2id={name: i for i, name in enumerate(metrics)},
+        metric_token_info=info,
+        metric_vocab_size=len(info["VOCAB"]) + 4,
+    ).eval()
+    with torch.no_grad():
+        model.decoder.output_layer.bias[14] = 100  # Favor mos_full first.
+    requested = ["mos_full", "language", "mos"]
+    greedy, mean = _readouts(
+        model,
+        requested,
+        torch.randn(1, 5, 8),
+        torch.tensor([5]),
+        use_fixed_order=fixed_order,
+        defer_full_meta=True,
+    )
+    assert mean["token_seq"][0][1::2][-1] == 14
+    assert set(requested) <= set(mean) and "language_full" not in mean
+    assert mean["language"] == greedy["language"]
+    for name in ("mos", "mos_full"):
+        assert 0.0 <= mean[name][0] <= 2.0
+
+
+def test_legacy_value_token_range(make_arecho):
+    """The legacy range skips @0 and gives tokens past the last bin its value."""
+    # One more value token than the trained range needs, as in some vocabularies.
+    info = dict(
+        tokenizer={"mos": [0.0, 1.0, 2.0, 3.0]},
+        VOCAB=["mos@meta_label"] + [f"mos@{i}" for i in range(6)],
+        offset={"mos": [0, 7]},
+    )
+    model = make_arecho(
+        metric2id={"mos": 0}, metric_token_info=info, metric_vocab_size=11
+    ).eval()
+    with torch.no_grad():
+        model.decoder.output_layer.weight.zero_()
+        model.decoder.output_layer.bias.zero_()
+        model.decoder.output_layer.bias[5] = 80  # @0, outside the legacy range
+        model.decoder.output_layer.bias[8] = 50 + np.log(3)  # @3: value 2.0
+        model.decoder.output_layer.bias[10] = 50  # @5: past the last bin, 3.0
+    audio, lengths = torch.randn(1, 5, 8), torch.tensor([5])
+    greedy, mean = _readouts(model, ["mos"], audio, lengths)
+    assert greedy["mos"] == [0.0] and mean["mos"][0] == pytest.approx(0.0, abs=1e-9)
+    greedy, mean = _readouts(model, ["mos"], audio, lengths, value_token_range="legacy")
+    assert greedy["mos"] == [2.0] and mean["mos"][0] == pytest.approx(2.25)
+    with pytest.raises(ValueError, match="value_token_range"):
+        model.set_inference(1, ["mos"], False, value_token_range="vocab")
