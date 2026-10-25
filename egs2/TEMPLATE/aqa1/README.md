@@ -38,6 +38,16 @@ The recipe discovers the metric vocabulary from training `metric.scp`. You can
 also supply `--metric2id path/to/names`, containing one metric name per line.
 The saved model config embeds those names for portable inference.
 
+For prefix training data as used by ANCHOR, `pyscripts/utils/make_prefix_wav_scp.py`
+writes the 2/4/6/8 s prefixes of each clip in a `wav.scp` as rows keyed
+`<utt>__p<ms>` (for example `utt1__p002000`), with their audio and
+`utt2num_samples`. Once the prefixes are labelled,
+`pyscripts/utils/add_full_metric_targets.py` adds the labels of each whole clip to
+its prefix rows as `<metric>_full` targets, for the metrics you list, and extends
+`metric2id` and `metric2type`. To fine-tune on metrics that a published token info
+JSON lacks, `pyscripts/utils/extend_metric_vocab.py` appends them to the JSON and
+to the checkpoint's metric decoder.
+
 ## Run
 
 Create a recipe under `egs2/<corpus>/aqa1` with the shared setup script:
