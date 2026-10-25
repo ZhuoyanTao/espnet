@@ -77,6 +77,17 @@ With `defer_full_meta: true`, whole-clip `<metric>_full` targets of prefix
 rows follow all other pairs in training, and inference decodes them last
 unless `--defer_full_meta false` is given. Metric names ending in `_full` are
 reserved for such whole-clip targets.
+Without `--use_fixed_order`, `--fixed_metric_name_order` only restricts decoding
+to the listed metrics, which may include `<metric>_full` names.
+`--readout expected` reports E[X] of each numerical metric: the decoded sequence
+is teacher-forced once and each value-token posterior is averaged over the token
+values; categorical metrics keep the decoded label. Results of the original
+UniVERSA search, which ranges over every value token after `@0` (including
+untrained ones past the last bin), are reproduced with
+`--value_token_range legacy`.
+A model trained with a silent reference clip on every row expects that clip, not
+the empty reference slot used when none is given: decode it with
+`--silence_reference_sec <seconds>` (samples at `--fs`).
 
 Use `espnet2.bin.aqa_train` / `aqa_inference` for training and inference.
 Parameter names and published token IDs are preserved so existing weights can

@@ -112,3 +112,38 @@ def test_checkpoint_and_cli_inference(tmp_path, multi_branch):
     assert set(json.loads(scores)) == expected
     if multi_branch == "ar":
         assert (tmp_path / "output/token.scp").read_text().startswith("a 2 ")
+
+
+def _save_model(tmp_path, args):
+    """Build a model from task arguments and save its config and weights."""
+    model = AqaTask.build_model(args)
+    config, checkpoint = tmp_path / "config.yaml", tmp_path / "model.pth"
+    config.write_text(yaml.safe_dump(vars(args)))
+    torch.save(model.state_dict(), checkpoint)
+    return config, checkpoint
+
+
+def test_silence_reference(tmp_path):
+    """A silence clip replaces only a missing reference, unlike an empty slot."""
+    args = task_args(tmp_path)
+    args.use_ref_audio = True
+    config, checkpoint = _save_model(tmp_path, args)
+    default = AqaInference(config, checkpoint)
+    silence = AqaInference(config, checkpoint, silence_reference_sec=0.5, fs=512)
+    audio, reference = torch.randn(256), torch.randn(200)
+    expected = default(audio, ref_audio=torch.zeros(256))
+    actual = silence(audio)
+    empty = default(audio)
+    for metric in ("mos", "wer"):
+        np.testing.assert_allclose(actual[metric], expected[metric])
+        assert not np.allclose(empty[metric], expected[metric])
+        np.testing.assert_allclose(
+            silence(audio, ref_audio=reference)[metric],
+            default(audio, ref_audio=reference)[metric],
+        )
+    with pytest.raises(ValueError, match="positive"):
+        AqaInference(config, checkpoint, silence_reference_sec=0.0)
+    with pytest.raises(ValueError, match="require an ARECHO model"):
+        AqaInference(config, checkpoint, readout="expected")
+    with pytest.raises(ValueError, match="require an ARECHO model"):
+        AqaInference(config, checkpoint, value_token_range="legacy")

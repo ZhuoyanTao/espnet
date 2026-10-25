@@ -31,6 +31,9 @@ from espnet2.legacy.nets.pytorch_backend.transformer.label_smoothing_loss import
 )
 from espnet2.torch_utils.device_funcs import force_gatherable
 
+READOUTS = ("greedy", "expected")
+VALUE_TOKEN_RANGES = ("trained", "legacy")
+
 
 class ARUniversa(AbsUniversa):
     """Encode audio and optional references, then decode metric/value pairs."""
@@ -182,6 +185,9 @@ class ARUniversa(AbsUniversa):
         self.use_normalize = use_normalize
         self.search_module = None
         self.save_token_seq = False
+        self.readout = "greedy"
+        self.value_token_range = "trained"
+        self._value_supports = {}
 
         self.metric2id = metric2id
         self.metric_token_pad_value = metric_token_pad_value
@@ -508,12 +514,15 @@ class ARUniversa(AbsUniversa):
         save_token_seq: bool = False,
         use_fixed_order: bool = False,
         defer_full_meta: bool = False,
+        readout: str = "greedy",
+        value_token_range: str = "trained",
     ) -> None:
         """Set inference mode.
 
         Args:
             beam_size (int): Beam size for beam search.
-            metric_list (List[str]): List of metrics to predict.
+            metric_list (List[str]): List of metrics to predict. It may name
+                whole-clip ``<m>_full`` metrics.
             skip_meta_label_score (bool): Whether to skip meta label score.
             save_token_seq (bool): Whether to save token sequence.
             use_fixed_order (bool): Decode metrics in the requested order.
@@ -523,27 +532,34 @@ class ARUniversa(AbsUniversa):
                 only a partial order: the model still chooses the order within
                 the prefix group and within the whole-clip group, as it learned
                 from the shuffled training pairs.
+            readout (str): ``"greedy"`` reports the decoded value tokens.
+                ``"expected"`` reports E[X] for numerical metrics instead (see
+                :meth:`expected_metric_values`); categories stay greedy.
+            value_token_range (str): Value tokens searched and averaged for a
+                metric. ``"trained"`` keeps those training tokenization can
+                produce. ``"legacy"`` takes every vocabulary value token after
+                ``@0``, as the original UniVERSA search did, to reproduce
+                results decoded that way.
         """
+        if readout not in READOUTS:
+            raise ValueError(f"readout must be one of {READOUTS}: {readout}")
+        if value_token_range not in VALUE_TOKEN_RANGES:
+            raise ValueError(
+                f"value_token_range must be one of {VALUE_TOKEN_RANGES}: "
+                f"{value_token_range}"
+            )
+        self.value_token_range = value_token_range
         scorers = {
             "metric_decoder": self.decoder,
         }
         weights = {"metric_decoder": 1.0}
 
         # Use the same value-token boundaries as training tokenization.
-        beam_masking = {}
-        for metric_name in metric_list:
-            metric_token = self.metric_tokenizer.get_metric_meta_label(metric_name)
-            values = self.metric_tokenizer.tokenizer_config[metric_name]
-            first_value_index = 1 if isinstance(values[0], str) else 0
-            _, start_idx = self.metric_tokenizer.get_token_index(
-                metric_name, first_value_index
-            )
-            _, last_idx = self.metric_tokenizer.get_token_index(
-                metric_name, first_value_index + len(values) - 1
-            )
-            beam_masking[metric_token] = (start_idx, last_idx + 1)
+        label = self.metric_tokenizer.get_metric_meta_label
+        beam_masking = {label(m): self._value_token_range(m) for m in metric_list}
 
         self.save_token_seq = save_token_seq
+        self.readout = readout
         # As in training, whole-clip metrics follow every prefix metric.
         deferred_meta_labels = [
             self.metric_tokenizer.get_metric_meta_label(metric)
@@ -568,6 +584,91 @@ class ARUniversa(AbsUniversa):
             use_fixed_order=use_fixed_order,
             deferred_meta_labels=deferred_meta_labels,
         )
+
+    def _value_token_range(self, metric_name: str) -> Tuple[int, int]:
+        """Return the half-open range of a metric's searched value-token IDs."""
+        if self.value_token_range == "legacy":
+            offset, size = self.metric_tokenizer.metric_offset[metric_name]
+            start = offset + self.metric_tokenizer.overall_offset + 2
+            return start, start + size - 2
+        values = self.metric_tokenizer.tokenizer_config[metric_name]
+        first_value_index = 1 if isinstance(values[0], str) else 0
+        _, start_idx = self.metric_tokenizer.get_token_index(
+            metric_name, first_value_index
+        )
+        _, last_idx = self.metric_tokenizer.get_token_index(
+            metric_name, first_value_index + len(values) - 1
+        )
+        return start_idx, last_idx + 1
+
+    def _value_support(self, metric_name: str) -> Tuple[int, int, torch.Tensor]:
+        """Return a numerical metric's value-token range and token values."""
+        key = (metric_name, self.value_token_range)
+        if key not in self._value_supports:
+            start, end = self._value_token_range(metric_name)
+            thresholds = self.metric_tokenizer.tokenizer_config[metric_name]
+            vocab = self.metric_tokenizer.get_token_list()
+            # Legacy ranges may end past the last bin; such tokens, which
+            # training never produces, take the last value.
+            values = [
+                (
+                    thresholds[-1]
+                    if int(vocab[token].rsplit("@", 1)[1]) > len(thresholds)
+                    else self.metric_tokenizer.token2metric(token, metric_name)
+                )
+                for token in range(start, end)
+            ]
+            self._value_supports[key] = (
+                start,
+                end,
+                torch.tensor(values, dtype=torch.float64),
+            )
+        return self._value_supports[key]
+
+    @torch.no_grad()
+    @typechecked
+    def expected_metric_values(
+        self,
+        audio_enc: torch.Tensor,
+        audio_enc_lengths: torch.Tensor,
+        token_seq: Union[List[int], torch.Tensor],
+    ) -> Dict[str, float]:
+        """Read out E[X] of each numerical metric in a decoded token sequence.
+
+        The sequence is teacher-forced through the decoder in one pass. At the
+        position that predicts a metric's value, the decoder distribution
+        restricted to that metric's value tokens (the range the search allows)
+        is the value posterior. E[X] is the posterior mean of the token values
+        given by ``MetricTokenizer.token2metric``; a one-hot posterior gives
+        the greedy value. Categorical metrics are left out.
+
+        Args:
+            audio_enc (torch.Tensor): Encoder output of one utterance (1, T, D).
+            audio_enc_lengths (torch.Tensor): Valid encoder frames (1,).
+            token_seq (Union[List[int], torch.Tensor]): SOS followed by
+                metric-label/value token pairs, e.g. a search hypothesis.
+
+        Returns:
+            Dict[str, float]: E[X] of each numerical metric in ``token_seq``.
+        """
+        ys = torch.as_tensor(token_seq, device=audio_enc.device).long().view(1, -1)
+        if ys.size(1) % 2 == 0 or int(ys[0, 0]) != self.sos:
+            raise ValueError("token_seq must be SOS followed by label/value pairs")
+        ys_in = ys[:, :-1]
+        logits, _ = self.decoder(
+            audio_enc, audio_enc_lengths, ys_in, ys_in.new_full((1,), ys_in.size(1))
+        )
+        log_probs = torch.log_softmax(logits[0].float(), dim=-1)
+        expected = {}
+        # The output at a label position predicts that metric's value token.
+        for position in range(1, ys.size(1), 2):
+            metric = self.metric_tokenizer.token2metric(int(ys[0, position]))
+            if isinstance(self.metric_tokenizer.tokenizer_config[metric][0], str):
+                continue
+            start, end, values = self._value_support(metric)
+            posterior = torch.softmax(log_probs[position, start:end].double(), dim=-1)
+            expected[metric] = float(posterior @ values.to(posterior.device))
+        return expected
 
     @torch.no_grad()
     @typechecked
@@ -628,6 +729,13 @@ class ARUniversa(AbsUniversa):
         pred_metrics = self.metric_tokenizer.tokenseq2metric(
             pred_metrics, return_dict=True
         )
+        if self.readout == "expected":
+            expected = self.expected_metric_values(
+                audio_enc[:1, : encoded_lengths[0]],
+                encoded_lengths[:1],
+                nbest_hyps[0].yseq,
+            )
+            pred_metrics.update({name: [value] for name, value in expected.items()})
 
         if self.save_token_seq:
             pred_metrics["token_seq"] = [[int(token) for token in nbest_hyps[0].yseq]]

@@ -171,6 +171,72 @@ def test_inference_defer_full_meta_follows_training(
     assert labels.index("14") == (2 if last else 0)
 
 
+def test_expected_readout_cli(tmp_path, full_token_info):
+    """The CLI decodes requested whole-clip metrics last and writes E[X]."""
+    args = task_args(tmp_path)
+    args.universa = "ar_universa"
+    args.sequential_metric = True
+    args.use_ref_audio = True
+    args.metric2id = ["mos_full", "mos", "language_full", "language"]
+    args.metric2type = dict(
+        mos_full="numerical",
+        mos="numerical",
+        language_full="categorical",
+        language="categorical",
+    )
+    args.metric_token_info = full_token_info
+    args.universa_conf["metric_decoder_params"] = dict(
+        num_blocks=1, attention_heads=2, linear_units=16
+    )
+    config, checkpoint = tmp_path / "config.yaml", tmp_path / "model.pth"
+    config.write_text(yaml.safe_dump(vars(args)))
+    torch.save(AqaTask.build_model(args).state_dict(), checkpoint)
+    wav, scp = tmp_path / "audio.wav", tmp_path / "wav.scp"
+    soundfile.write(wav, np.random.randn(256).astype(np.float32), 16000)
+    scp.write_text(f"a {wav}\n")
+
+    def decode(readout, *options):
+        output = tmp_path / f"{readout}{len(options)}"
+        inference_main(
+            [
+                "--output_dir",
+                str(output),
+                "--train_config",
+                str(config),
+                "--model_file",
+                str(checkpoint),
+                "--data_path_and_name_and_type",
+                f"{scp},audio,sound",
+                "--save_token_seq",
+                "true",
+                "--num_workers",
+                "0",
+                "--fixed_metric_name_order",
+                "mos_full,language,mos",
+                "--defer_full_meta",
+                "true",
+                "--silence_reference_sec",
+                "0.1",
+                "--readout",
+                readout,
+                *options,
+            ]
+        )
+        scores = json.loads((output / "metric.scp").read_text().split(maxsplit=1)[1])
+        return scores, (output / "token.scp").read_text().split()[2::2]
+
+    greedy, greedy_labels = decode("greedy")
+    mean, labels = decode("expected")
+    assert labels == greedy_labels and labels[-1] == "14"  # mos_full last
+    assert set(mean) == {"mos_full", "language", "mos"}
+    assert mean["language"] == greedy["language"] in ("eng", "jpn")
+    for name in ("mos", "mos_full"):
+        assert greedy[name] in args.metric_token_info["tokenizer"][name]
+        assert 0.0 <= mean[name] <= 2.0 and mean[name] != greedy[name]
+    legacy, _ = decode("expected", "--value_token_range", "legacy")
+    assert legacy.keys() == mean.keys() and legacy["mos"] != mean["mos"]
+
+
 def test_base_data_setup(tmp_path):
     """Build scalar-metric data helpers before and after metadata normalization."""
     args = task_args(tmp_path)
