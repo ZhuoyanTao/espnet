@@ -1,0 +1,38 @@
+# VERSA metrics measured on every prefix ("so far" labels) and, unless
+# local/data.sh gets another --whole_versa_config, on every whole clip.
+# Module and output names follow VERSA 563a47f, the revision that labelled the
+# released model's data. local/data.sh scores 16 kHz audio; at other rates that
+# VERSA revision's pseudo_mos rates plcmos and singmos at the wrong rate.
+- name: pseudo_mos
+  predictor_types: ["utmos", "plcmos", "singmos"]
+  predictor_args:
+    utmos:
+      fs: 16000
+    plcmos:
+      fs: 16000
+    singmos:
+      fs: 16000
+- name: nisqa
+  # NISQA weights from VERSA's tools/setup_nisqa.sh; use an absolute path.
+  model_path: ./tools/NISQA/weights/nisqa.tar
+- name: sheet_ssqa
+- name: scoreq_nr
+  data_domain: natural
+- name: asvspoof_score
+- name: audiobox_aesthetics
+  batch_size: 1
+
+# Reference-based metrics, computed only for rows with a reference
+# (data/<split>_whole/ref_wav.scp, cut to the same prefix).
+- name: pesq
+- name: stoi
+- name: signal_metric
+- name: scoreq_ref
+  data_domain: natural
+- name: nomad
+- name: noresqa
+  metric_type: 1
+- name: discrete_speech
+- name: speaker
+  model_tag: default
+- name: emo2vec_similarity
