@@ -1,0 +1,40 @@
+# Report E[X] of each numerical metric's value-token posterior (categorical
+# metrics keep the decoded label) with the settings that reproduce the released
+# epoch-25 model's results: the original UniVERSA value-token range, whole-clip
+# <metric>_full targets decoded after the prefix metrics, and the 1 s silent
+# reference clip it saw on every training row (used when no reference is given).
+batch_size: 1
+beam_size: 1
+readout: expected
+value_token_range: legacy
+defer_full_meta: true
+silence_reference_sec: 1.0
+fs: 16000
+# Decode the 20 no-reference metrics measured on a prefix, then the 73 whole-clip
+# forecasts of the released model. Adapt the list to another metric vocabulary,
+# or set it to "" to decode every metric of the model.
+fixed_metric_name_order: >-
+    utmos plcmos nisqa_mos_pred nisqa_noi_pred nisqa_dis_pred nisqa_col_pred
+    nisqa_loud_pred f0_median f0_std snr_est speech_ratio bg_event
+    sheet_ssqa singmos scoreq_nr asvspoof_score audiobox_aesthetics_CE
+    audiobox_aesthetics_CU audiobox_aesthetics_PC audiobox_aesthetics_PQ
+    srmr_full language_full nisqa_mos_pred_full nisqa_noi_pred_full
+    nisqa_dis_pred_full nisqa_col_pred_full nisqa_loud_pred_full
+    sheet_ssqa_full utmos_full utmosv2_full dns_overall_full dns_p808_full
+    plcmos_full singmos_full scoreq_nr_full se_sdr_full se_si_snr_full
+    se_ci_sdr_full audiobox_aesthetics_CE_full audiobox_aesthetics_CU_full
+    audiobox_aesthetics_PC_full audiobox_aesthetics_PQ_full
+    asvspoof_score_full real_language_full snr_simulation_full
+    rir_room_size_full nomad_full emotion_similarity_full noresqa_score_full
+    speech_bert_full speech_bleu_full speech_token_distance_full
+    scoreq_ref_full asr_match_error_rate_full ref_text_length_full
+    pred_text_length_full spk_similarity_full rt60_full visqol_full
+    pysepm_fwsegsnr_full pysepm_llr_full pysepm_wss_full pysepm_cd_full
+    pysepm_c_sig_full pysepm_c_bak_full pysepm_c_ovl_full
+    pysepm_csii_high_full pysepm_csii_mid_full pysepm_csii_low_full
+    pysepm_ncm_full mcd_full f0rmse_full f0corr_full pesq_full stoi_full
+    sdr_full si_snr_full ci_sdr_full nisqa_real_mos_full wer_full cer_full
+    urgent_mos_full voicemos_real_mos_full f0_median_full f0_std_full
+    snr_est_full speech_ratio_full bg_event_full somos_real_mos_full
+    tmhint_real_mos_full pstn_real_mos_full tencent_real_mos_full
+    urgent25_real_mos_full

@@ -1,0 +1,96 @@
+# Autoregressive prefix rater: ARECHO-style metric decoder over frozen WavLM
+# Large features. A training row is a whole clip or a 2/4/6/8 s prefix of one;
+# prefix rows carry the metrics measured on the prefix and the whole-clip labels
+# as <metric>_full targets, decoded after the prefix metrics.
+# These are the settings of the released epoch-25 model (see README.md). It was
+# trained on 4 GPUs (--ngpu 4) from an ARECHO checkpoint whose token vocabulary
+# was extended to metric_token_info. The historical embedding_dim and use_rope
+# keys are left out: the original code ignored them (sinusoidal positions).
+
+########################
+# Model architecture   #
+########################
+frontend: s3prl
+frontend_conf:
+    frontend_conf:
+        upstream: wavlm_large
+    download_dir: ./hub
+    multilayer_feature: true
+freeze_param:
+- frontend.upstream
+
+universa: ar_universa
+universa_conf:
+    embedding_size: 512
+    audio_encoder_type: transformer
+    audio_encoder_params:
+        num_blocks: 4
+        attention_heads: 4
+        linear_units: 1024
+        dropout_rate: 0.1
+        positional_dropout_rate: 0.1
+        attention_dropout_rate: 0.1
+        input_layer: conv2d
+        normalize_before: true
+        concat_after: false
+        positionwise_layer_type: linear
+        positionwise_conv_kernel_size: 1
+        layer_drop_rate: 0.1
+        qk_norm: false
+        use_flash_attn: false
+    cross_attention_type: multihead
+    cross_attention_params:
+        n_head: 2
+        dropout_rate: 0.1
+    metric_decoder_params:
+        num_blocks: 12
+        attention_heads: 8
+        linear_units: 2048
+        dropout_rate: 0.1
+        positional_dropout_rate: 0.1
+        src_attention_dropout_rate: 0.1
+        self_attention_dropout_rate: 0.1
+        input_layer: embed
+        normalize_before: true
+        concat_after: false
+        layer_drop_rate: 0.1
+        qk_norm: false
+        use_flash_attn: false
+    lsm_weight: 0.1
+
+########################
+# Metric tokens        #
+########################
+sequential_metric: true
+tokenize_numerical_metric: true
+defer_full_meta: true
+# Token info covering every metric in metric2id; local/data.sh copies it here.
+metric_token_info: data/token_info.json
+
+########################
+# Training parameters  #
+########################
+seed: 777
+max_epoch: 25
+num_iters_per_epoch: 7794
+batch_type: sorted
+batch_size: 12
+accum_grad: 2
+grad_clip: 1.0
+use_amp: true
+num_workers: 3
+num_att_plot: 0
+log_interval: 50
+cudnn_deterministic: false
+best_model_criterion:
+-   - valid
+    - loss
+    - min
+keep_nbest_models: 25
+
+optim: adamw
+optim_conf:
+    lr: 0.0002
+scheduler: warmuplr
+scheduler_conf:
+    warmup_steps: 50000
