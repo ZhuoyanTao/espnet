@@ -128,6 +128,16 @@ class Conv1dSubsampling1(torch.nn.Module):
             pos_enc if pos_enc is not None else PositionalEncoding(odim, dropout_rate)
         )
 
+    def upgrade_state_dict(self, state_dict: dict, prefix: str = ""):
+        """Rename legacy ``out.0``/``out.1`` keys of a state dict in place.
+
+        load_state_dict() does this itself. load_pretrained_model() calls it
+        before merging a checkpoint into the model's own state dict, which
+        holds the new names: renaming afterwards would keep the model's own
+        tensors instead of the checkpoint's.
+        """
+        _upgrade_legacy_subsampling_state_dict(state_dict, prefix)
+
     def _load_from_state_dict(
         self,
         state_dict,
@@ -229,6 +239,16 @@ class Conv1dSubsampling2(torch.nn.Module):
         self.pos_enc = (
             pos_enc if pos_enc is not None else PositionalEncoding(odim, dropout_rate)
         )
+
+    def upgrade_state_dict(self, state_dict: dict, prefix: str = ""):
+        """Rename legacy ``out.0``/``out.1`` keys of a state dict in place.
+
+        load_state_dict() does this itself. load_pretrained_model() calls it
+        before merging a checkpoint into the model's own state dict, which
+        holds the new names: renaming afterwards would keep the model's own
+        tensors instead of the checkpoint's.
+        """
+        _upgrade_legacy_subsampling_state_dict(state_dict, prefix)
 
     def _load_from_state_dict(
         self,
@@ -332,6 +352,16 @@ class Conv1dSubsampling3(torch.nn.Module):
             pos_enc if pos_enc is not None else PositionalEncoding(odim, dropout_rate)
         )
 
+    def upgrade_state_dict(self, state_dict: dict, prefix: str = ""):
+        """Rename legacy ``out.0``/``out.1`` keys of a state dict in place.
+
+        load_state_dict() does this itself. load_pretrained_model() calls it
+        before merging a checkpoint into the model's own state dict, which
+        holds the new names: renaming afterwards would keep the model's own
+        tensors instead of the checkpoint's.
+        """
+        _upgrade_legacy_subsampling_state_dict(state_dict, prefix)
+
     def _load_from_state_dict(
         self,
         state_dict,
@@ -433,6 +463,16 @@ class Conv2dSubsampling(torch.nn.Module):
         self.pos_enc = (
             pos_enc if pos_enc is not None else PositionalEncoding(odim, dropout_rate)
         )
+
+    def upgrade_state_dict(self, state_dict: dict, prefix: str = ""):
+        """Rename legacy ``out.0``/``out.1`` keys of a state dict in place.
+
+        load_state_dict() does this itself. load_pretrained_model() calls it
+        before merging a checkpoint into the model's own state dict, which
+        holds the new names: renaming afterwards would keep the model's own
+        tensors instead of the checkpoint's.
+        """
+        _upgrade_legacy_subsampling_state_dict(state_dict, prefix)
 
     def _load_from_state_dict(
         self,
@@ -536,6 +576,16 @@ class Conv2dSubsampling1(torch.nn.Module):
             pos_enc if pos_enc is not None else PositionalEncoding(odim, dropout_rate)
         )
 
+    def upgrade_state_dict(self, state_dict: dict, prefix: str = ""):
+        """Rename legacy ``out.0``/``out.1`` keys of a state dict in place.
+
+        load_state_dict() does this itself. load_pretrained_model() calls it
+        before merging a checkpoint into the model's own state dict, which
+        holds the new names: renaming afterwards would keep the model's own
+        tensors instead of the checkpoint's.
+        """
+        _upgrade_legacy_subsampling_state_dict(state_dict, prefix)
+
     def _load_from_state_dict(
         self,
         state_dict,
@@ -637,6 +687,16 @@ class Conv2dSubsampling2(torch.nn.Module):
         self.pos_enc = (
             pos_enc if pos_enc is not None else PositionalEncoding(odim, dropout_rate)
         )
+
+    def upgrade_state_dict(self, state_dict: dict, prefix: str = ""):
+        """Rename legacy ``out.0``/``out.1`` keys of a state dict in place.
+
+        load_state_dict() does this itself. load_pretrained_model() calls it
+        before merging a checkpoint into the model's own state dict, which
+        holds the new names: renaming afterwards would keep the model's own
+        tensors instead of the checkpoint's.
+        """
+        _upgrade_legacy_subsampling_state_dict(state_dict, prefix)
 
     def _load_from_state_dict(
         self,
@@ -740,6 +800,16 @@ class Conv2dSubsampling6(torch.nn.Module):
             pos_enc if pos_enc is not None else PositionalEncoding(odim, dropout_rate)
         )
 
+    def upgrade_state_dict(self, state_dict: dict, prefix: str = ""):
+        """Rename legacy ``out.0``/``out.1`` keys of a state dict in place.
+
+        load_state_dict() does this itself. load_pretrained_model() calls it
+        before merging a checkpoint into the model's own state dict, which
+        holds the new names: renaming afterwards would keep the model's own
+        tensors instead of the checkpoint's.
+        """
+        _upgrade_legacy_subsampling_state_dict(state_dict, prefix)
+
     def _load_from_state_dict(
         self,
         state_dict,
@@ -832,6 +902,16 @@ class Conv2dSubsampling8(torch.nn.Module):
         self.pos_enc = (
             pos_enc if pos_enc is not None else PositionalEncoding(odim, dropout_rate)
         )
+
+    def upgrade_state_dict(self, state_dict: dict, prefix: str = ""):
+        """Rename legacy ``out.0``/``out.1`` keys of a state dict in place.
+
+        load_state_dict() does this itself. load_pretrained_model() calls it
+        before merging a checkpoint into the model's own state dict, which
+        holds the new names: renaming afterwards would keep the model's own
+        tensors instead of the checkpoint's.
+        """
+        _upgrade_legacy_subsampling_state_dict(state_dict, prefix)
 
     def _load_from_state_dict(
         self,

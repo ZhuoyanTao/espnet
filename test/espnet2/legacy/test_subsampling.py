@@ -1,6 +1,9 @@
 import pytest
 import torch
 
+from espnet2.legacy.nets.pytorch_backend.transformer.embedding import (
+    ScaledPositionalEncoding,
+)
 from espnet2.legacy.nets.pytorch_backend.transformer.subsampling import (
     Conv1dSubsampling1,
     Conv1dSubsampling2,
@@ -13,6 +16,7 @@ from espnet2.legacy.nets.pytorch_backend.transformer.subsampling import (
     _conv_out_length,
     check_short_utt,
 )
+from espnet2.torch_utils.load_pretrained_model import load_pretrained_model
 
 SUBSAMPLING_CLASSES = (
     Conv1dSubsampling1,
@@ -137,6 +141,44 @@ def test_subsampling_state_dict_compatibility(subsampling_cls):
 
     assert torch.allclose(latest_y, reloaded_y)
     assert torch.equal(latest_mask, reloaded_mask)
+
+
+@pytest.mark.parametrize("ignore_init_mismatch", [False, True])
+@pytest.mark.parametrize("subsampling_cls", SUBSAMPLING_CLASSES)
+def test_load_pretrained_model_legacy_subsampling_keys(
+    tmp_path, subsampling_cls, ignore_init_mismatch
+):
+    """--init_param restores a checkpoint saved with the legacy keys."""
+
+    class Model(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.embed = subsampling_cls(
+                TEST_IDIM, TEST_ODIM, 0.0, ScaledPositionalEncoding(TEST_ODIM, 0.0)
+            )
+
+    torch.manual_seed(0)
+    trained = Model()
+    with torch.no_grad():
+        trained.embed.pos_enc.alpha.fill_(2.0)
+    legacy_state_dict = {
+        key.replace("embed.out.", "embed.out.0.").replace(
+            "embed.pos_enc.", "embed.out.1."
+        ): value
+        for key, value in trained.state_dict().items()
+    }
+    assert "embed.out.0.weight" in legacy_state_dict
+    assert "embed.out.1.alpha" in legacy_state_dict
+    path = tmp_path / "legacy.pth"
+    torch.save(legacy_state_dict, path)
+
+    torch.manual_seed(1)
+    model = Model()
+    load_pretrained_model(str(path), model, ignore_init_mismatch)
+
+    loaded = model.state_dict()
+    for key, value in trained.state_dict().items():
+        assert torch.equal(loaded[key], value), key
 
 
 # Time-axis (kernel, stride) for each Conv* class. Used to compute the
